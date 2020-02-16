@@ -333,27 +333,6 @@ module zxuno (
 		 .clkcpu_enable(clkcpu_enable)
 	);
 
-//   tv80n_wrapper el_z80 (
-//      .m1_n(m1_n),
-//      .mreq_n(mreq_n),
-//      .iorq_n(iorq_n),
-//      .rd_n(rd_n),
-//      .wr_n(wr_n),
-//      .rfsh_n(rfsh_n),
-//      .halt_n(),
-//      .busak_n(),
-//      .A(cpuaddr),
-//      .dout(cpudout),
-//
-//      .reset_n(rst_n & mrst_n & power_on_reset_n),  // cualquiera de los dos resets
-//      .clk(cpuclk),
-//      .wait_n(wait_n),
-//      .int_n(int_n),
-//      .nmi_n((nmi_n | enable_nmi_n) & nmispecial_n),
-//      .busrq_n(1'b1),
-//      .di(cpudin)
-//  );
-
    cpu_and_dma el_z80_con_su_dma (
       .m1_n(m1_n),
       .mreq_n(mreq_n),
@@ -372,7 +351,7 @@ module zxuno (
       .clkdma(sysclk),
       .wait_n(wait_spi_n),
       .int_n(int_n),
-      .nmi_n((nmi_n | enable_nmi_n) & nmispecial_n),
+      .nmi_n((nmi_n | enable_nmi_n) /*& nmispecial_n*/),
       .di(cpudin),
       
       .zxuno_addr(zxuno_addr),
@@ -616,16 +595,17 @@ module zxuno (
     );
 
     // DESHABILITADO!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    scratch_register scratch (
-        .clk(1'b0 /*sysclk*/),
-        .poweron_rst_n(power_on_reset_n),
-        .zxuno_addr(zxuno_addr),
-        .zxuno_regrd(zxuno_regrd),
-        .zxuno_regwr(zxuno_regwr),
-        .din(cpudout),
-        .dout(scratch_dout),
-        .oe_n(oe_n_scratch)
-    );
+//    scratch_register scratch (
+//        .clk(sysclk),
+//        .poweron_rst_n(power_on_reset_n),
+//        .zxuno_addr(zxuno_addr),
+//        .zxuno_regrd(zxuno_regrd),
+//        .zxuno_regwr(zxuno_regwr),
+//        .din(cpudout),
+//        .dout(scratch_dout),
+//        .oe_n(oe_n_scratch)
+//    );
+    assign oe_n_scratch = 1'b1;
 
     control_ad724 ad724 (
         .clk(sysclk),
@@ -701,24 +681,25 @@ module zxuno (
     );
 
     // DESHABILITADO!!!!!!!!!!!!!!!!!!!!!!!!!
-    nmievents nmi_especial_de_antonio (
-        .clk(1'b0 /*sysclk*/),
-        .rst_n(rst_n & mrst_n & power_on_reset_n),
-        //------------------------------
-        .zxuno_addr(zxuno_addr),
-        .zxuno_regrd(zxuno_regrd),
-        //------------------------------
-        .userevents(user_fnt),
-        //------------------------------
-        .a(cpuaddr),
-        .m1_n(m1_n),
-        .mreq_n(mreq_n),
-        .rd_n(rd_n),
-        .dout(nmievents_dout),
-        .oe_n(oe_n_nmievents),
-        .nmiout_n(nmispecial_n),
-        .page_configrom_active(page_configrom_active)
-    );
+//    nmievents nmi_especial_de_antonio (
+//        .clk(sysclk),
+//        .rst_n(rst_n & mrst_n & power_on_reset_n),
+//        //------------------------------
+//        .zxuno_addr(zxuno_addr),
+//        .zxuno_regrd(zxuno_regrd),
+//        //------------------------------
+//        .userevents(user_fnt),
+//        //------------------------------
+//        .a(cpuaddr),
+//        .m1_n(m1_n),
+//        .mreq_n(mreq_n),
+//        .rd_n(rd_n),
+//        .dout(nmievents_dout),
+//        .oe_n(oe_n_nmievents),
+//        .nmiout_n(nmispecial_n),
+//        .page_configrom_active(page_configrom_active)
+//    );
+    assign oe_n_nmievents = 1'b1;
 
     ps2_mouse_kempston el_raton (
         .clk(sysclk),
@@ -908,35 +889,40 @@ module zxuno (
     .uart_rts(uart_rts)
     );
   
-  /// Modulo de depuracion
-  debug visor_valores_en_pantalla (
-    .clk(1'b0/*sysclk*/),
-    .visible(1'b0),
-    .hc(hcnt),
-    .vc(vcnt),
-    .ri(rula),
-    .gi(gula),
-    .bi(bula),
-    .ro(r),
-    .go(g),
-    .bo(b),
-    //////////////////////////
-    .v16_a(v16_a),
-    .v16_b(v16_b),
-    .v16_c(v16_c),
-    .v16_d(v16_d),
-    .v16_e(v16_e),
-    .v16_f(v16_f),
-    .v16_g(v16_g),
-    .v16_h(v16_h),
-    .v8_a(v8_a),
-    .v8_b(v8_b),
-    .v8_c(v8_c),
-    .v8_d(v8_d),
-    .v8_e(v8_e),
-    .v8_f(v8_f),
-    .v8_g(v8_g),
-    .v8_h(v8_h)
-    );
+  // Modulo de depuracion
+//  debug visor_valores_en_pantalla (
+//    .clk(sysclk),
+//    .visible(1'b1),
+//    .hc(hcnt),
+//    .vc(vcnt),
+//    .ri(rula),
+//    .gi(gula),
+//    .bi(bula),
+//    .ro(r),
+//    .go(g),
+//    .bo(b),
+//    //////////////////////////
+//    .v16_a(v16_a),
+//    .v16_b(v16_b),
+//    .v16_c(v16_c),
+//    .v16_d(v16_d),
+//    .v16_e(v16_e),
+//    .v16_f(v16_f),
+//    .v16_g(v16_g),
+//    .v16_h(v16_h),
+//    .v8_a(v8_a),
+//    .v8_b(v8_b),
+//    .v8_c(v8_c),
+//    .v8_d(v8_d),
+//    .v8_e(v8_e),
+//    .v8_f(v8_f),
+//    .v8_g(v8_g),
+//    .v8_h(v8_h)
+//    );
+
+  // Asignar cuando el visor no está disponible
+  assign r = rula;
+	assign g = gula;
+	assign b = bula;
 
 endmodule

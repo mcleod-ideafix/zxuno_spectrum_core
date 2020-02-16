@@ -30,18 +30,22 @@ module lut(
     input wire [5:0] a1,
     input wire [5:0] a2,
     input wire [5:0] a3,
-    output wire [7:0] do1,
-    output wire [7:0] do2,
-    output wire [7:0] do3
+    output reg [7:0] do1,
+    output reg [7:0] do2,
+    output reg [7:0] do3
     );
 
-   reg [7:0] lut[0:63];
-   assign do1 = lut[a1];
-   assign do2 = lut[a2];
-   assign do3 = lut[a3];
+    reg [7:0] lut[0:63];
+//    assign do1 = lut[a1];
+//    assign do2 = lut[a2];
+//    assign do3 = lut[a3];
    
-   always @(posedge clk)
-      if (load)
-         lut[a3] <= din;
-
+    always @(posedge clk) begin
+      do1 <= lut[a1];
+      do2 <= lut[a2];      
+      if (load == 1'b1)
+        lut[a3] <= din;
+			else
+			  do3 <= lut[a3];
+    end
 endmodule

@@ -75,8 +75,7 @@ module pal_sync_generator (
     reg [8:0] end_vblank = 9'd255;
     reg [8:0] begin_vsync = 9'd248;
     reg [8:0] end_vsync = 9'd251;
-    reg [8:0] begin_vcint = 9'd248;
-    reg [8:0] end_vcint = 9'd248;
+    reg [8:0] vcint = 9'd248;
     reg [8:0] begin_hcint = 9'd0;
     reg [8:0] end_hcint = 9'd63;
     
@@ -106,11 +105,9 @@ module pal_sync_generator (
       if (hc == end_count_h) begin
         hc <= 9'd0;
         if (vc == end_count_v) begin
-           vc <= 9'd0;
-//			  if (mode != old_mode) begin
-//			     old_mode <= mode;
-				  case (mode)
-					 2'b00: begin // timings for Sinclair 48K
+          vc <= 9'd0;
+          case (mode)
+					  2'b00: begin // timings for Sinclair 48K
 								  end_count_h <= 9'd447;
 								  end_count_v <= 9'd311;
 								  hc_sync <= hinit48k;
@@ -123,12 +120,11 @@ module pal_sync_generator (
 								  end_vblank <= 9'd255;
 								  begin_vsync <= 9'd248;
 								  end_vsync <= 9'd251;
-								  begin_vcint <= 9'd248;
-								  end_vcint <= 9'd248;
+								  vcint <= 9'd248;
 								  begin_hcint <= 9'd4;
 								  end_hcint <= 9'd67;
 							  end
-					 2'b01: begin // timings for Sinclair 128K/+2 grey
+            2'b01: begin // timings for Sinclair 128K/+2 grey
 								  end_count_h <= 9'd455;
 								  end_count_v <= 9'd310;
 								  hc_sync <= hinit128k;
@@ -141,12 +137,11 @@ module pal_sync_generator (
 								  end_vblank <= 9'd255;
 								  begin_vsync <= 9'd248;
 								  end_vsync <= 9'd251;
-								  begin_vcint <= 9'd248;
-								  end_vcint <= 9'd248;
+								  vcint <= 9'd248;
 								  begin_hcint <= 9'd6;
 								  end_hcint <= 9'd69;
 							  end
-					 2'b10: begin // timings for Pentagon 128
+					  2'b10: begin // timings for Pentagon 128
 								  end_count_h <= 9'd447;
 								  end_count_v <= 9'd319;
 								  hc_sync <= hinitpen;
@@ -159,12 +154,11 @@ module pal_sync_generator (
 								  end_vblank <= 9'd271;
 								  begin_vsync <= 9'd240;
 								  end_vsync <= 9'd255;
-								  begin_vcint <= 9'd239;
-								  end_vcint <= 9'd239;
+								  vcint <= 9'd239;
 								  begin_hcint <= 9'd326;
 								  end_hcint <= 9'd397;
 							  end
-					 2'b11: begin // timings for Sinclair 48K NTSC
+					  2'b11: begin // timings for Sinclair 48K NTSC
 								  end_count_h <= 9'd447;
 								  end_count_v <= 9'd261;
 								  hc_sync <= 9'd112;
@@ -177,13 +171,11 @@ module pal_sync_generator (
 								  end_vblank <= 9'd223;
 								  begin_vsync <= 9'd216;
 								  end_vsync <= 9'd219;
-								  begin_vcint <= 9'd216;
-								  end_vcint <= 9'd216;
+								  vcint <= 9'd216;
 								  begin_hcint <= 9'd4;
 								  end_hcint <= 9'd67;
 							  end
 				  endcase
-//			  end	  
         end
         else
           vc <= vc + 9'd1;
@@ -206,21 +198,10 @@ module pal_sync_generator (
     assign int_n = vretrace_int_n & raster_int_n;
     assign raster_int_in_progress = ~raster_int_n;
 
-//    always @(posedge clk) begin
-//      if (clken) begin
-//        if (vretraceint_disable == 1'b0) begin
-//          if (hc == begin_hcint && vc == begin_vcint)
-//            vretrace_int_n <= 1'b0;
-//          else if (hc == end_hcint && vc == end_vcint)
-//            vretrace_int_n <= 1'b1;
-//        end
-//      end
-//    end
-
     always @* begin
       vretrace_int_n = 1'b1;
       if (vretraceint_disable == 1'b0) begin
-        if (vc == begin_vcint && hc >= begin_hcint && hc <= end_hcint) 
+        if (vc == vcint && hc >= begin_hcint && hc <= end_hcint) 
             vretrace_int_n = 1'b0;
       end
     end
@@ -237,26 +218,6 @@ module pal_sync_generator (
 
     reg hblank; // = 1'b0;
     reg vblank; // = 1'b0;
-//    always @(posedge clk) begin
-//      if (clken) begin
-//        if (hc == begin_hblank)
-//          hblank <= 1'b1;
-//        else if (hc == end_hblank)
-//          hblank <= 1'b0;
-//        if (vc == begin_vblank)
-//          vblank <= 1'b1;
-//        else if (vc == end_vblank)
-//          vblank <= 1'b0;
-//        if (hc == begin_hsync)
-//          hsync <= 1'b0;
-//        else if (hc == end_hsync)
-//          hsync <= 1'b1;
-//        if (vc == begin_vsync)
-//          vsync <= 1'b0;
-//        else if (vc == end_vsync)
-//          vsync <= 1'b1;
-//      end
-//    end
     always @* begin
       if (hc >= begin_hblank && hc <= end_hblank)
         hblank = 1'b1;

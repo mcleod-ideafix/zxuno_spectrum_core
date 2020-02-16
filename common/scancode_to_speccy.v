@@ -36,7 +36,7 @@ module scancode_to_speccy (
     input wire kbclean,
     //------------------------
     input wire [7:0] sp_row,
-    output wire [4:0] sp_col,
+    output reg [4:0] sp_col,
     //------------------------
     input wire [7:0] din,
     output reg [7:0] dout,
@@ -76,29 +76,25 @@ module scancode_to_speccy (
     
     // Asi funciona la matriz de teclado cuando se piden semifilas
     // desde la CPU.
-    // Un always @* hubiera quedado más claro en la descripción
-    // pero por algun motivo, el XST no lo ha admitido en este caso
-    assign sp_col = ((sp_row[0] == 1'b0)? row[0] : 5'b11111) &
-                    ((sp_row[1] == 1'b0)? row[1] : 5'b11111) &
-                    ((sp_row[2] == 1'b0)? row[2] : 5'b11111) &
-                    ((sp_row[3] == 1'b0)? row[3] : 5'b11111) &
-                    ((sp_row[4] == 1'b0)? row[4] : 5'b11111) &
-                    ((sp_row[5] == 1'b0)? row[5] : 5'b11111) &
-                    ((sp_row[6] == 1'b0)? row[6] : 5'b11111) &
-                    ((sp_row[7] == 1'b0)? row[7] : 5'b11111);
+		integer r;
+		always @* begin
+		  sp_col = 5'b11111;
+			for (r = 0; r <= 7; r = r + 1) begin :generate_kbd_column_data
+  			if (sp_row[r] == 1'b0)
+	  		  sp_col = sp_col & row[r];
+			end
+		end
                     
-    reg [3:0] keycount = 4'b0000;
-        
     parameter 
-        CLEANMATRIX = 4'd0, 
-        IDLE        = 4'd1, 
-        READSPKEY   = 4'd2, 
-        TRANSLATE1  = 4'd3,
-        TRANSLATE2  = 4'd4,
-        CPUTIME     = 4'd5,
-        CPUREAD     = 4'd6,
-        CPUWRITE    = 4'd7,
-        CPUINCADD   = 4'd8;
+        CLEANMATRIX     = 4'd0, 
+        IDLE            = 4'd1, 
+        READSPKEY       = 4'd2, 
+        TRANSLATE1      = 4'd3,
+        TRANSLATE2      = 4'd4,
+        CPUTIME         = 4'd5,
+        CPUREAD         = 4'd6,
+        CPUWRITE        = 4'd7,
+        CPUINCADD       = 4'd8;
         
     reg [3:0] state = CLEANMATRIX;
     reg key_is_pending = 1'b0;
@@ -111,8 +107,7 @@ module scancode_to_speccy (
             state <= CLEANMATRIX;
         else begin
             case (state)
-                CLEANMATRIX: begin
-                    keycount <= 4'b0000;
+                CLEANMATRIX: begin  //TODO: para evitar tener que usar el limpiador de teclado, hay que modificar esta FSM para que cuando se suelte una tecla, no solo actualice la matriz para esa combinación de tecla+modificadores, sino también para las otras 7 combinaciones.
                     row[0] <= 5'b11111;
                     row[1] <= 5'b11111;
                     row[2] <= 5'b11111;
@@ -158,7 +153,7 @@ module scancode_to_speccy (
                     else begin
                       row[keyrow2] <= row[keyrow2] | keycol2;
                     end
-                    state <= IDLE;
+									  state <= IDLE;
                 end
                 CPUTIME: begin            
                     if (rewind == 1'b1) begin
@@ -214,79 +209,20 @@ module keyboard_pressed_status (
     output reg kbclean
     );
     
-    parameter
-        RESETTING = 2'd0,
-        UPDATING  = 2'd1,
-        SCANNING  = 2'd2;
-        
-    reg keybstat_ne[0:127];  // non extended keymap
-    reg keybstat_ex[0:127];  // extended keymap
-    reg [6:0] addrscan = 7'h00; // keymap bit address
-    reg keypressed_ne = 1'b0; // there is at least one key pressed
-    reg keypressed_ex = 1'b0; // there is at least one extended key pressed
-    reg [1:0] state = RESETTING;
-    
-    integer i;
+    reg [255:0] keybstat;  // keymap
     initial begin
-        kbclean = 1'b1;
-        for (i=0;i<128;i=i+1) begin
-            keybstat_ne[i] = 1'b0;
-            keybstat_ex[i] = 1'b0;
-        end
+      kbclean = 1'b1;
+      keybstat = 256'h0;
     end
     
-    always @(posedge clk) begin
-        if (rst == 1'b1) begin
-            state <= RESETTING;
-            addrscan <= 8'h00;
-        end
-        else begin
-            case (state)
-                RESETTING:
-                    begin
-                        if (addrscan == 7'h7F) begin
-                            addrscan <= 7'h00;
-                            state <= SCANNING;
-                            kbclean <= 1'b1;
-                        end
-                        else begin
-                            keybstat_ne[addrscan] <= 1'b0;
-                            keybstat_ex[addrscan] <= 1'b0;
-                            addrscan <= addrscan + 7'd1;
-                        end
-                    end
-                UPDATING:
-                    begin
-                        state <= SCANNING;
-                        addrscan <= 7'h00;
-                        kbclean <= 1'b0;
-                        keypressed_ne <= 1'b0;
-                        keypressed_ex <= 1'b0;
-                        if (extended == 1'b0)
-                            keybstat_ne[scancode] <= ~released;
-                        else
-                            keybstat_ex[scancode] <= ~released;
-                    end
-                SCANNING:
-                    begin
-                        if (scan_received == 1'b1) begin
-                            state <= UPDATING;
-                        end
-                        else begin
-                            addrscan <= addrscan + 7'd1;
-                            if (addrscan == 7'h7F) begin
-                               kbclean <= ~(keypressed_ne | keypressed_ex);
-                               keypressed_ne <= 1'b0;
-                               keypressed_ex <= 1'b0;
-                            end
-                            else begin
-                               keypressed_ne <= keypressed_ne | keybstat_ne[addrscan];
-                               keypressed_ex <= keypressed_ex | keybstat_ex[addrscan];
-                            end
-                        end
-                    end
-            endcase
-        end
+		always @(posedge clk)
+		  kbclean <= ~(|keybstat);
+		
+    always @(posedge clk) begin		  
+      if (rst == 1'b1)
+        keybstat <= 256'h0;
+      else if (scan_received == 1'b1)
+        keybstat[{extended,scancode}] <= ~released;
     end
 endmodule
 

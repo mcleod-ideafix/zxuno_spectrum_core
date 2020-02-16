@@ -35,10 +35,10 @@ module ps2_port (
     output wire extended  // extendida=1, no extendida=0
     );
     
-    `define RCVSTART    2'b00
-    `define RCVDATA     2'b01 
-    `define RCVPARITY   2'b10
-    `define RCVSTOP     2'b11
+    localparam RCVSTART  = 2'b00,
+               RCVDATA   = 2'b01,
+               RCVPARITY = 2'b10,
+               RCVSTOP   = 2'b11;
 
     reg [7:0] key = 8'h00;
 
@@ -64,11 +64,11 @@ module ps2_port (
     // Paridad instantánea de los bits recibidos
     wire paritycalculated = ^key;
     
-    // Contador de time-out. Al llegar a 65536 ciclos sin que ocurra
+    // Contador de time-out. Al llegar a 16777216 ciclos sin que ocurra
     // un flanco de bajada en PS2CLK, volvemos al estado inicial
-    reg [15:0] timeoutcnt = 16'h0000;
+    reg [23:0] timeoutcnt = 24'h000000;
 
-    reg [1:0] state = `RCVSTART;
+    reg [1:0] state = RCVSTART;
     reg [1:0] regextended = 2'b00;
     reg [1:0] regreleased = 2'b00;
     reg rkb_interrupt = 1'b0;
@@ -81,30 +81,30 @@ module ps2_port (
             rkb_interrupt <= 1'b0;
         end
         if (ps2clkedge && enable_rcv) begin
-            timeoutcnt <= 16'h0000;
+            timeoutcnt <= 24'h000000;
             case (state)
-                `RCVSTART: begin
+                RCVSTART: begin
                     if (ps2data == 1'b0) begin
-                        state <= `RCVDATA;
+                        state <= RCVDATA;
                         key <= 8'h80;
                     end
                 end
-                `RCVDATA: begin
+                RCVDATA: begin
                     key <= {ps2data, key[7:1]};
                     if (key[0] == 1'b1) begin
-                        state <= `RCVPARITY;
+                        state <= RCVPARITY;
                     end
                 end
-                `RCVPARITY: begin
+                RCVPARITY: begin
                     if (ps2data^paritycalculated == 1'b1) begin
-                        state <= `RCVSTOP;
+                        state <= RCVSTOP;
                     end
                     else begin
-                        state <= `RCVSTART;
+                        state <= RCVSTART;
                     end
                 end
-                `RCVSTOP: begin
-                    state <= `RCVSTART;                
+                RCVSTOP: begin
+                    state <= RCVSTART;                
                     if (ps2data == 1'b1) begin                        
                         scancode <= key;
                         if (kb_or_mouse == 1'b1) begin
@@ -125,13 +125,13 @@ module ps2_port (
                         end
                     end
                 end    
-                default: state <= `RCVSTART;
+                default: state <= RCVSTART;
             endcase
         end           
         else begin
-            timeoutcnt <= timeoutcnt + 1;
-            if (timeoutcnt == 16'hFFFF) begin
-                state <= `RCVSTART;
+            timeoutcnt <= timeoutcnt + 24'd1;
+            if (timeoutcnt == 24'hFFFFFF) begin
+                state <= RCVSTART;
             end
         end
     end
@@ -139,7 +139,7 @@ endmodule
 
 
 module ps2_host_to_kb (
-    input wire clk,          // se recomienda 1 MHz <= clk <= 600 MHz
+    input wire clk,          // calibrado para 28 MHz
     inout wire ps2clk_ext,
     inout wire ps2data_ext,
     input wire [7:0] data,
@@ -181,9 +181,9 @@ module ps2_host_to_kb (
     wire ps2clknedge = (edgedetect == 16'hF000)? 1'b1 : 1'b0;
     wire ps2clkpedge = (edgedetect == 16'h0FFF)? 1'b1 : 1'b0;
     
-    // Contador de time-out. Al llegar a 65536 ciclos sin que ocurra
+    // Contador de time-out. Al llegar a 16777216 ciclos sin que ocurra
     // un flanco de bajada en PS2CLK, volvemos al estado inicial
-    reg [15:0] timeoutcnt = 16'h0000;
+    reg [23:0] timeoutcnt = 24'h000000;
 
     reg [2:0] state = `SENDFINISHED;
     reg [7:0] shiftreg = 8'h00;
@@ -201,36 +201,36 @@ module ps2_host_to_kb (
             rdata <= data;
             busy <= 1'b1;
             error <= 1'b0;
-            timeoutcnt <= 16'h0000;
+            timeoutcnt <= 24'h000000;
             state <= `PULLCLKLOW;
         end
 
         if (!ps2clknedge) begin
-            timeoutcnt <= timeoutcnt + 1;
-            if (timeoutcnt == 16'hFFFF && state != `SENDFINISHED) begin
+            timeoutcnt <= timeoutcnt + 24'd1;
+            if (timeoutcnt == 24'hFFFFFF && state != `SENDFINISHED) begin
                 error <= 1'b1;
                 state <= `SENDFINISHED;
             end
         end
 
         case (state)
-            `PULLCLKLOW: begin  // 40000 cuentas es poco más de 10ms
-                if (timeoutcnt >= 16'd40000) begin
+            `PULLCLKLOW: begin  // 280000 cuentas son 10ms para 28 MHz
+                if (timeoutcnt >= 24'd280000) begin
                     state <= `PULLDATALOW;
                     shiftreg <= rdata;
                     cntbits <= 3'd0;
-                    timeoutcnt <= 16'h0000;
+                    timeoutcnt <= 24'h000000;
                 end
             end
             `PULLDATALOW: begin
                 if (ps2clknedge) begin
                     state <= `SENDDATA;
-                    timeoutcnt <= 16'h0000;
+                    timeoutcnt <= 24'h000000;
                 end
             end
             `SENDDATA: begin
                 if (ps2clknedge) begin
-                    timeoutcnt <= 16'h0000;
+                    timeoutcnt <= 24'h000000;
                     shiftreg <= {1'b0, shiftreg[7:1]};
                     cntbits <= cntbits + 1;
                     if (cntbits == 3'd7)
@@ -240,28 +240,28 @@ module ps2_host_to_kb (
             `SENDPARITY: begin
                 if (ps2clknedge) begin
                     state <= `RCVIDLE;
-                    timeoutcnt <= 16'h0000;
+                    timeoutcnt <= 24'h000000;
                 end
             end
             `RCVIDLE: begin
                 if (ps2clknedge) begin
                     state <= `RCVACK;
-                    timeoutcnt <= 16'h0000;
+                    timeoutcnt <= 24'h000000;
                 end
             end        
             `RCVACK: begin
                 if (ps2clknedge) begin
                     state <= `SENDFINISHED;
-                    timeoutcnt <= 16'h0000;
+                    timeoutcnt <= 24'h000000;
                 end
             end
             `SENDFINISHED: begin
                 busy <= 1'b0;
-                timeoutcnt <= 16'h0000;
+                timeoutcnt <= 24'h000000;
             end
             default: begin
                 timeoutcnt <= timeoutcnt + 1;
-                if (timeoutcnt == 16'hFFFF && state != `SENDFINISHED) begin
+                if (timeoutcnt == 24'hFFFFFF && state != `SENDFINISHED) begin
                     error <= 1'b1;
                     state <= `SENDFINISHED;
                 end
