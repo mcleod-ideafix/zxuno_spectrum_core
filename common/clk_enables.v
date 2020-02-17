@@ -31,18 +31,20 @@ module clk_enables (
 	output wire clk7nen,
 	output wire clk35en,
 	output wire clk35en_n,
+	output wire clk175en,
 	output wire clkcpu_enable
   );
 
-  reg [7:0] divclk = 8'b00000001;
+  reg [15:0] divclk = 16'b00000001;
   always @(posedge clk)
-    divclk <= {divclk[6:0], divclk[7]};
+    divclk <= {divclk[14:0], divclk[15]};
 
-  assign clk14en = divclk[0] | divclk[2] | divclk[4] | divclk[6];
-  assign clk7en  = divclk[0] | divclk[4];   
-  assign clk7nen = divclk[2] | divclk[6];
-  assign clk35en = divclk[0];
-  assign clk35en_n = divclk[7];
+  assign clk14en   = divclk[0] | divclk[2] | divclk[4] | divclk[6] | divclk[8] | divclk[10] | divclk[12] | divclk[14];
+  assign clk7en    = divclk[0] | divclk[4] | divclk[8] | divclk[12];   
+  assign clk7nen   = divclk[2] | divclk[6] | divclk[10] | divclk[14];
+  assign clk35en   = divclk[0] | divclk[8];
+  assign clk35en_n = divclk[7] | divclk[15]; //divclk[4] | divclk[12];  
+	assign clk175en  = divclk[0];
 
   assign clkcpu_enable = (turbo_option == 2'b11)            ||
                          (turbo_option == 2'b10 && clk14en) ||

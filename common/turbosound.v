@@ -26,6 +26,7 @@
 module turbosound (
     input wire clk,
 		input wire clk35en,
+		input wire clk175en,
     input wire reset_n,
     input wire disable_ay,
     input wire disable_turboay,

@@ -97,7 +97,7 @@ module zxuno (
  	 wire CPUContention;
    wire [1:0] turbo_option;
 	 wire clkcpu_enable;
-	 wire clk14en, clk7en, clk7nen, clk35en, clk35en_n;
+	 wire clk14en, clk7en, clk7nen, clk35en, clk35en_n, clk175en;
 
    // Señales de la CPU
    wire mreq_n,iorq_n,rd_n,wr_n,int_n,m1_n,nmi_n,rfsh_n,busak_n;
@@ -330,6 +330,7 @@ module zxuno (
 		 .clk7nen(clk7nen),
 		 .clk35en(clk35en),
 		 .clk35en_n(clk35en_n),
+		 .clk175en(clk175en),
 		 .clkcpu_enable(clkcpu_enable)
 	);
 
@@ -816,6 +817,7 @@ module zxuno (
   turbosound dos_ays (     
     .clk(sysclk),
 		.clk35en(clk35en),
+		.clk175en(clk175en),
     .disable_ay(disable_ay),
     .disable_turboay(disable_turboay),
     .reset_n(rst_n & mrst_n & power_on_reset_n),

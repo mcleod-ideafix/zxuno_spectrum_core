@@ -149,8 +149,8 @@ module pzx_player (
     reg [30:0] duration = 31'h0;
     reg [33:0] cduration = 34'h0;   // cuenta ciclos de 28MHz hasta alcanzar el valor de duration
     reg [15:0] pulsecounter = 16'h0;
-    reg [15:0] pulse0[0:31];
-    reg [15:0] pulse1[0:31];
+    (* ram_style = "distributed" *) reg [15:0] pulse0[0:31];
+    (* ram_style = "distributed" *) reg [15:0] pulse1[0:31];
     reg [4:0] indexpulse = 5'd0;
     reg [4:0] numberpulse0 = 5'd0;
     reg [4:0] numberpulse1 = 5'd0;
