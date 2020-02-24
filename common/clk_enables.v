@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+`default_nettype none
 
 //    This file is part of the ZXUNO Spectrum core. 
 //    Creation date is 01:22:22 2020-02-09 by Miguel Angel Rodriguez Jodar

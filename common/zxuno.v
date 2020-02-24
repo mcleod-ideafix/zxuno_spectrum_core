@@ -141,7 +141,7 @@ module zxuno (
    wire [7:0] ay2_audio;
    wire [7:0] ay1_cha, ay1_chb, ay1_chc;
    wire [7:0] ay2_cha, ay2_chb, ay2_chc;
-   wire [7:0] specdrum_left, specdrum_right;
+   wire [7:0] specdrum;
    wire [15:0] midi_left, midi_right;
    wire [7:0] mixer_dout;
    wire oe_n_mixer;
@@ -744,8 +744,7 @@ module zxuno (
         .iorq_n(iorq_n | disable_specdrum),
         .wr_n(wr_n),
         .d(cpudout),
-        .specdrum_left(specdrum_left),
-        .specdrum_right(specdrum_right)
+        .specdrum_out(specdrum)
     );
     
     disk_drive el_disco (
@@ -858,8 +857,7 @@ module zxuno (
   .ay2_cha(ay2_cha),
   .ay2_chb(ay2_chb),
   .ay2_chc(ay2_chc),
-  .specdrum_left(specdrum_left),
-  .specdrum_right(specdrum_right),
+  .specdrum(specdrum),
   .midi_left(midi_left),
   .midi_right(midi_right),
     

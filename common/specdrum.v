@@ -30,73 +30,13 @@ module specdrum (
    input wire iorq_n,
    input wire wr_n,
    input wire [7:0] d,
-   output reg [7:0] specdrum_left,
-   output reg [7:0] specdrum_right
+   output reg [7:0] specdrum_out
    );
 
-   reg [7:0] regsdrum = 8'h00;
-   always @* begin
-     specdrum_left = regsdrum;
-     specdrum_right = regsdrum;
-   end
    always @(posedge clk) begin
       if (rst_n == 1'b0)
-         regsdrum <= 8'h00;  // parche para evitar que ESXDOS interfiera |-------------------------|
-      //else if (iorq_n == 1'b0 && (a[7:0] == 8'hDF && a[15:8] != 8'h24 || a == 16'h24FD && d == 8'h24 || a[7:0] == 8'hFB) && wr_n == 1'b0)
+        specdrum_out <= 8'h00;
       else if (iorq_n == 1'b0 && (a[7:0] == 8'hDF || a[7:0] == 8'hFB) && wr_n == 1'b0)
-         regsdrum <= d ^ 8'h80;
+        specdrum_out <= d;
    end
 endmodule
-
-//module specdrum (
-//   input wire clk,
-//   input wire rst_n,
-//   input wire [7:0] a,
-//   input wire iorq_n,
-//   input wire wr_n,
-//   input wire [7:0] d,
-//   output reg [7:0] specdrum_left,
-//   output reg [7:0] specdrum_right
-//   );
-//
-//   reg [7:0] regsdrum = 8'h00;
-//   // pseudo estereo usando un delay de 256 muestras
-//   // (alrededor de 10 ms de retraso)
-//   reg [7:0] delay[0:255];
-//   reg [7:0] dmuestra;
-//   reg [7:0] idxwrite = 8'd0;
-//   reg [9:0] cnt = 10'd0; // 1 muestra por cada 1024 ciclos de reloj clk (28 MHz / 1024)
-//   
-//   initial begin
-//      specdrum_left = 8'h00;
-//      specdrum_right = 8'h00;
-//   end
-//   
-////   reg [7:0] compressor_lut[0:255];
-////   initial begin
-////      $readmemh ("curva_compresion.hex", compressor_lut);
-////   end
-//   
-//   always @(posedge clk) begin
-//      if (rst_n == 1'b0)
-//         regsdrum <= 8'h00;
-//      else if (iorq_n == 1'b0 && (a == 8'hDF || a == 8'hFB) && wr_n == 1'b0)
-//         regsdrum <= d + 8'h80; // compressor_lut[d];
-//   end
-//   
-//   always @(posedge clk) begin
-//      cnt <= cnt + 10'd1;
-//      case (cnt)
-//        10'd0: begin
-//                 delay[idxwrite] <= regsdrum;
-//                 idxwrite <= idxwrite + 8'd1;
-//               end
-//        10'd1: dmuestra <= delay[idxwrite];
-//        10'd2: begin
-//                specdrum_left <= regsdrum;
-//                specdrum_right <= dmuestra;
-//              end
-//      endcase
-//   end
-//        
-//endmodule
