@@ -145,7 +145,7 @@ module pll_top
       .BANDWIDTH("LOW"), // "HIGH", "LOW" or "OPTIMIZED"
       
       // CLKFBOUT stuff
-      .CLKFBOUT_MULT(14), 
+      .CLKFBOUT_MULT(14),
       .CLKFBOUT_PHASE(0.0),
       
       // Set the clock period (ns) of input clocks and reference jitter

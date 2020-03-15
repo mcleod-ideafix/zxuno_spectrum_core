@@ -89,8 +89,9 @@ module tld_zxuno_v4 (
    wire [2:0] ri, gi, bi;
    wire hsync_pal, vsync_pal, csync_pal;
    wire vga_enable, scanlines_enable;
+   wire clk14en_tovga;
 
-   zxuno #(.FPGA_MODEL(3'b001)) la_maquina (
+   zxuno #(.FPGA_MODEL(3'b001), .MASTERCLK(42000000)) la_maquina (
     .sysclk(sysclk),
     .power_on_reset_n(1'b1),  // sólo para simulación. Para implementacion, dejar a 1
     .r(ri),
@@ -138,6 +139,7 @@ module tld_zxuno_v4 (
     .mouseclk(mouseclk),
     .mousedata(mousedata),
     
+    .clk14en_tovga(clk14en_tovga),
     .vga_enable(vga_enable),
     .scanlines_enable(scanlines_enable),
     .freq_option(pll_frequency_option),
@@ -147,7 +149,8 @@ module tld_zxuno_v4 (
     );
 
 	vga_scandoubler #(.CLKVIDEO(14000)) salida_vga (
-		.clkvga(sysclk),
+		.clk(sysclk),
+    .clk14en(clk14en_tovga),
     .enable_scandoubling(vga_enable),
     .disable_scaneffect(~scanlines_enable),
 		.ri(ri),

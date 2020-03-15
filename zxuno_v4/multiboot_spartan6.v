@@ -30,7 +30,7 @@ module multiboot (
     input wire zxuno_regwr,
     input wire [7:0] din,
     output reg [7:0] dout,
-    output reg oe_n
+    output reg oe
     );
     
 `include "../common/config.vh"
@@ -47,12 +47,10 @@ module multiboot (
     reg [7:0] addrout = 8'h00;
     
     always @* begin
-      dout = 8'hFF;
-      oe_n = 1'b1;
-      if (zxuno_addr == ADDR_COREADDR && zxuno_regrd ==1'b1) begin
-        dout = addrout;
-        oe_n = 1'b0;
-      end
+      dout = addrout;
+      oe = 1'b0;
+      if (zxuno_addr == ADDR_COREADDR && zxuno_regrd ==1'b1)
+        oe = 1'b1;
     end  
 
     always @(posedge clk) begin

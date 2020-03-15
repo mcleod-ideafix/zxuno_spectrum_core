@@ -20,9 +20,26 @@
 #
 #    Any distributed copy of this file must keep this notice intact.
 
+# Timing constraints
+NET "clk50mhz" TNM_NET = "clk50mhz";
+#NET "sysclk" TNM_NET = "sysclk";
+
+TIMESPEC TS_clk50 = PERIOD "clk50mhz" 20ns HIGH 50%;
+#TIMESPEC TS_clk28 = PERIOD "sysclk" 29ns HIGH 50%;  #pongo en realidad la frecuencia más alta que tendrá este enable
+
+#NET "la_maquina/clk14en" TNM_NET = FFS "mc_clk14";
+#NET "la_maquina/clk7en" TNM_NET = FFS "mc_clk7";
+#NET "la_maquina/clk7en_n" TNM_NET = FFS "mc_clk7n";
+#NET "la_maquina/clk35en" TNM_NET = FFS "mc_clk35";
+#NET "la_maquina/clk35en_n" TNM_NET = FFS "mc_clk35n";
+#NET "la_maquina/clk175en" TNM_NET = FFS "mc_clk175";
+
+#TIMESPEC TS_mcycle14 = FROM "mc_clk14" TO "mc_clk14" TS_clk50 / 0.28;
+#TIMESPEC TS_mcycle7 = FROM "mc_clk7" TO "mc_clk7" TS_clk28 / 0.14;
+#TIMESPEC TS_mcycle175 = FROM "mc_clk175" TO "mc_clk175" TS_clk28 / 0.035;
+
 # Clocks & debug
 NET "clk50mhz" LOC="P55" | IOSTANDARD = LVCMOS33;
-#NET "clk50mhz" CLOCK_DEDICATED_ROUTE = FALSE;  #MAP necesita esto...
 NET "testled" LOC="P11" | IOSTANDARD = LVCMOS33;
 
 # Video output
@@ -43,7 +60,7 @@ NET "stdnb" LOC="P67" | IOSTANDARD = LVCMOS33;
 # Sound input/output
 NET "audio_out_left" LOC="P10" | IOSTANDARD = LVCMOS33;
 NET "audio_out_right" LOC="P9" | IOSTANDARD = LVCMOS33;
-NET "ear" LOC="P94" | IOSTANDARD = LVCMOS33;
+NET "ear" LOC="P94" | IOSTANDARD = LVCMOS33 | PULLUP;  #para que no quede flotante en el uZX1
 
 # MIDI
 NET "midi_out" LOC="P43" | IOSTANDARD = LVCMOS33 | DRIVE=12;  # MIDI_OUT del addon MIDI
