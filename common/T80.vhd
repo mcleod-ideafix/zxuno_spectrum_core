@@ -160,6 +160,7 @@ architecture rtl of T80 is
 
 	-- Help Registers
 	signal WZ                   : std_logic_vector(15 downto 0);        -- MEMPTR register
+  signal FChanged             : std_logic;                            -- Q flipflop (for SCF/CCF)
 	signal IR                   : std_logic_vector(7 downto 0);         -- Instruction register
 	signal ISet                 : std_logic_vector(1 downto 0);         -- Instruction set selector
 	signal RegBusA_r            : std_logic_vector(15 downto 0);
@@ -196,6 +197,7 @@ architecture rtl of T80 is
 	signal BusA                 : std_logic_vector(7 downto 0);
 	signal ALU_Q                : std_logic_vector(7 downto 0);
 	signal F_Out                : std_logic_vector(7 downto 0);
+  signal FChanged_Out         : std_logic;
 
 	-- Registered micro code outputs
 	signal Read_To_Reg_r        : std_logic_vector(4 downto 0);
@@ -355,6 +357,7 @@ begin
 			BusB    => BusB,
 			F_In    => F,
 			Q       => ALU_Q,
+      FC_Out  => FChanged_Out,
 			F_Out   => F_Out);
 
 	ClkEn <= CEN and not BusAck;
@@ -378,6 +381,7 @@ begin
 			PC <= (others => '0');  -- Program Counter
 			A <= (others => '0');
 			WZ <= (others => '0');
+      FChanged <= '0';
 			IR <= "00000000";
 			ISet <= "00";
 			XY_State <= "00";
@@ -584,26 +588,43 @@ begin
 						if I_CPL = '1' then
 							-- CPL
 							ACC <= not ACC;
+              -- MCLEOD!!! en todo if/when/case en el que se toquen los flags, poner Q a 1
 							F(Flag_Y) <= not ACC(5);
 							F(Flag_H) <= '1';
 							F(Flag_X) <= not ACC(3);
 							F(Flag_N) <= '1';
+              FChanged <= '1';
 						end if;
 						if I_CCF = '1' then
 							-- CCF
 							F(Flag_C) <= not F(Flag_C);
-							F(Flag_Y) <= ACC(5);
 							F(Flag_H) <= F(Flag_C);
-							F(Flag_X) <= ACC(3);
 							F(Flag_N) <= '0';
+              -- MCLEOD!!! preguntar aquí por Q. Si vale 1, entonces es solo ACC. Si es 0, es el OR de los flags con ACC
+              -- y acto seguido, poner Q a 1 ya que se han tocado los flags
+              if FChanged = '0' then
+							  F(Flag_Y) <= F(Flag_Y) or ACC(5);
+							  F(Flag_X) <= F(Flag_X) or ACC(3);
+              else
+							  F(Flag_Y) <= ACC(5);
+							  F(Flag_X) <= ACC(3);
+              end if;
+              FChanged <= '1';
 						end if;
 						if I_SCF = '1' then
 							-- SCF
+              -- MCLEOD!!! aquí lo mismo que en CCF
 							F(Flag_C) <= '1';
-							F(Flag_Y) <= ACC(5);
 							F(Flag_H) <= '0';
-							F(Flag_X) <= ACC(3);
 							F(Flag_N) <= '0';
+              if FChanged = '0' then
+							  F(Flag_Y) <= F(Flag_Y) or ACC(5);
+							  F(Flag_X) <= F(Flag_X) or ACC(3);
+              else
+							  F(Flag_Y) <= ACC(5);
+							  F(Flag_X) <= ACC(3);
+              end if;
+              FChanged <= '1';
 						end if;
 					end if;
 
@@ -614,6 +635,7 @@ begin
 						F(Flag_H) <= ioq(8);
 						ioq := (ioq and "000000111") xor ('0' & BusA);
 						F(Flag_P) <= not (ioq(0) xor ioq(1) xor ioq(2) xor ioq(3) xor ioq(4) xor ioq(5) xor ioq(6) xor ioq(7));
+            FChanged <= '1';
 					end if;
 
 					if TState = 2 and Wait_n = '1' then
@@ -682,6 +704,7 @@ begin
 							ACC <= I;
 							F(Flag_P) <= IntE_FF2;
 							F(Flag_S) <= I(7);
+              FChanged <= '1';
 
 							if I = x"00" then
 								F(Flag_Z) <= '1';
@@ -699,6 +722,7 @@ begin
 							ACC <= std_logic_vector(R);
 							F(Flag_P) <= IntE_FF2;
 							F(Flag_S) <= R(7);
+              FChanged <= '1';
 
 							if R = x"00" then
 								F(Flag_Z) <= '1';
@@ -724,6 +748,7 @@ begin
 						F(6) <= F_Out(6);
 						F(5) <= F_Out(5);
 						F(7) <= F_Out(7);
+            FChanged <= FChanged_Out;
 						if PreserveC_r = '0' then
 							F(4) <= F_Out(4);
 						end if;
@@ -739,6 +764,7 @@ begin
 					F(Flag_N) <= '0';
 					F(Flag_X) <= DI_Reg(3);
 					F(Flag_Y) <= DI_Reg(5);
+          FChanged <= '1';
 					if DI_Reg(7 downto 0) = "00000000" then
 						F(Flag_Z) <= '1';
 					else
@@ -779,11 +805,13 @@ begin
 					F(Flag_Y) <= ALU_Q(1);
 					F(Flag_H) <= '0';
 					F(Flag_N) <= '0';
+          FChanged <= '1';
 				end if;
 				if TState = 1 and I_BC = '1' then
 					n := ALU_Q - ("0000000" & F_Out(Flag_H));
 					F(Flag_X) <= n(3);
 					F(Flag_Y) <= n(1);
+          FChanged <= '1';
 				end if;
 				if I_BC = '1' or I_BT = '1' then
 					F(Flag_P) <= IncDecZ;

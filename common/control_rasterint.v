@@ -31,7 +31,7 @@ module rasterint_ctrl (
     input wire zxuno_regwr,
     input wire [7:0] din,
     output reg [7:0] dout,
-    output reg oe_n,
+    output reg oe,
     output wire rasterint_enable,
     output wire vretraceint_disable,
     output wire [8:0] raster_line,
@@ -66,14 +66,14 @@ module rasterint_ctrl (
     
     always @* begin
         dout = 8'hFF;
-        oe_n = 1'b1;
+        oe = 1'b0;
         if (zxuno_addr == RASTERLINE && zxuno_regrd == 1'b1) begin
             dout = rasterline_reg;
-            oe_n = 1'b0;
+            oe = 1'b1;
         end
         if (zxuno_addr == RASTERCTRL && zxuno_regrd == 1'b1) begin
             dout = {raster_int_in_progress, 4'b0000, vretrace_disable, raster_enable, raster_8th_bit};
-            oe_n = 1'b0;
+            oe = 1'b1;
         end
     end
 endmodule

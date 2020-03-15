@@ -48,16 +48,16 @@ module ps2_port (
     wire ps2clk = ps2clk_synchr[1];
     wire ps2data = ps2dat_synchr[1];
     always @(posedge clk) begin
-        ps2clk_synchr[0] <= ps2clk_ext;
-        ps2clk_synchr[1] <= ps2clk_synchr[0];
-        ps2dat_synchr[0] <= ps2data_ext;
-        ps2dat_synchr[1] <= ps2dat_synchr[0];
+      ps2clk_synchr[0] <= ps2clk_ext;
+      ps2clk_synchr[1] <= ps2clk_synchr[0];
+      ps2dat_synchr[0] <= ps2data_ext;
+      ps2dat_synchr[1] <= ps2dat_synchr[0];
     end
 
     // De-glitcher. Sólo detecto flanco de bajada
     reg [15:0] negedgedetect = 16'h0000;
     always @(posedge clk) begin
-        negedgedetect <= {negedgedetect[14:0], ps2clk};
+      negedgedetect <= {negedgedetect[14:0], ps2clk};
     end
     wire ps2clkedge = (negedgedetect == 16'hF000)? 1'b1 : 1'b0;
     
@@ -167,16 +167,16 @@ module ps2_host_to_kb (
     wire ps2clk = ps2clk_synchr[1];
     wire ps2data_in = ps2dat_synchr[1];
     always @(posedge clk) begin
-        ps2clk_synchr[0] <= ps2clk_ext;
-        ps2clk_synchr[1] <= ps2clk_synchr[0];
-        ps2dat_synchr[0] <= ps2data_ext;
-        ps2dat_synchr[1] <= ps2dat_synchr[0];
+      ps2clk_synchr[0] <= ps2clk_ext;
+      ps2clk_synchr[1] <= ps2clk_synchr[0];
+      ps2dat_synchr[0] <= ps2data_ext;
+      ps2dat_synchr[1] <= ps2dat_synchr[0];
     end
 
     // De-glitcher. Sólo detecto flanco de bajada
     reg [15:0] edgedetect = 16'h0000;
     always @(posedge clk) begin
-        edgedetect <= {edgedetect[14:0], ps2clk};
+      edgedetect <= {edgedetect[14:0], ps2clk};
     end
     wire ps2clknedge = (edgedetect == 16'hF000)? 1'b1 : 1'b0;
     wire ps2clkpedge = (edgedetect == 16'h0FFF)? 1'b1 : 1'b0;
@@ -266,7 +266,7 @@ module ps2_host_to_kb (
                     state <= `SENDFINISHED;
                 end
             end
-        endcase              
+        endcase     
     end
     
     assign ps2data_ext = (state == `PULLCLKLOW || state == `PULLDATALOW)    ? 1'b0 :

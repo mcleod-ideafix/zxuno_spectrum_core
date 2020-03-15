@@ -33,22 +33,22 @@ module ps2_mouse_kempston (
     input wire iorq_n,
     input wire rd_n,
     output wire [7:0] kmouse_dout,
-    output wire oe_n_kmouse,
+    output wire oe_kmouse,
     //---------------------------------
     input wire [7:0] zxuno_addr,
     input wire zxuno_regrd,
     input wire zxuno_regwr,
     input wire [7:0] din,
     output wire [7:0] mousedata_dout,
-    output wire oe_n_mousedata,
+    output wire oe_mousedata,
     output reg [7:0] mousestatus_dout,
-    output wire oe_n_mousestatus
+    output wire oe_mousestatus
     );
 
 `include "config.vh"
 
-    assign oe_n_mousedata = ~(zxuno_addr == MOUSEDATA && zxuno_regrd == 1'b1);
-    assign oe_n_mousestatus = ~(zxuno_addr == MOUSESTATUS && zxuno_regrd == 1'b1);
+    assign oe_mousedata = (zxuno_addr == MOUSEDATA && zxuno_regrd == 1'b1);
+    assign oe_mousestatus = (zxuno_addr == MOUSESTATUS && zxuno_regrd == 1'b1);
 
     wire [7:0] mousedata;
     wire [7:0] kmouse_x, kmouse_y, kmouse_buttons;
@@ -65,7 +65,7 @@ module ps2_mouse_kempston (
                              (kmouse_y_req_n==1'b0)? kmouse_y :
                              (kmouse_butt_req_n==1'b0)? kmouse_buttons :
                              8'hZZ;
-    assign oe_n_kmouse = kmouse_x_req_n & kmouse_y_req_n & kmouse_butt_req_n;
+    assign oe_kmouse = ~(kmouse_x_req_n & kmouse_y_req_n & kmouse_butt_req_n);
     
     /*
     | BSY | 0 | 0 | 0 | ERR | 0 | 0 | DATA_AVL |
@@ -75,7 +75,7 @@ module ps2_mouse_kempston (
         mousestatus_dout[7:1] <= {ps2busy, 3'b000, ps2error, 2'b00};
         if (nuevo_evento == 1'b1)
             mousestatus_dout[0] <= 1'b1;
-        if (oe_n_mousestatus == 1'b0)
+        if (oe_mousestatus == 1'b1)
             reading_mousestatus <= 1'b1;
         else if (reading_mousestatus == 1'b1) begin
             mousestatus_dout[0] <= 1'b0;

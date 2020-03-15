@@ -30,7 +30,7 @@ module coreid (
     input wire zxuno_regrd,
     input wire regaddr_changed,
     output reg [7:0] dout,
-    output wire oe_n
+    output wire oe
     );
 
 `include "config.vh"
@@ -45,17 +45,17 @@ module coreid (
     
     reg [3:0] textindx = 4'h0;
     reg reading = 1'b0;
-    assign oe_n = !(zxuno_addr == IDSTRING && zxuno_regrd==1'b1);
+    assign oe = (zxuno_addr == IDSTRING && zxuno_regrd==1'b1);
     
     always @(posedge clk) begin
         if (rst_n == 1'b0 || (regaddr_changed==1'b1 && zxuno_addr==IDSTRING)) begin
             textindx <= 4'h0;
             reading <= 1'b0;
         end
-        else if (oe_n==1'b0) begin
+        else if (oe==1'b1) begin
             reading <= 1'b1;
         end
-        else if (reading == 1'b1 && oe_n==1'b1) begin
+        else if (reading == 1'b1 && oe==1'b0) begin
             reading <= 1'b0;
             textindx <= textindx + 1;
         end

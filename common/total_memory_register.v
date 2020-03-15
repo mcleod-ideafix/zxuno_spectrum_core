@@ -33,13 +33,13 @@ module board_capabilities (
     input wire [2:0] fpga_model,
     input wire [7:0] din,
     output wire [7:0] dout,
-    output wire oe_n,
+    output wire oe,
     output wire [1:0] current_value
     );
 
 `include "config.vh"
     
-    assign oe_n = ~(zxuno_addr == MEMREPORT && zxuno_regrd == 1'b1);
+    assign oe = (zxuno_addr == MEMREPORT && zxuno_regrd == 1'b1);
     reg [1:0] memreport = 2'b00;  // initial value
     assign dout = {4'b0000, fpga_model, memreport};
     

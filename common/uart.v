@@ -38,7 +38,9 @@ module uart (
     output wire rts
     );
 
-    uart_tx transmitter (
+    parameter CLK = 28000000;
+
+    uart_tx #(.CLK(CLK)) transmitter (
         .clk(clk),
         .txdata(txdata),
         .txbegin(txbegin),
@@ -46,7 +48,7 @@ module uart (
         .tx(tx)
     );
 
-    uart_rx receiver (
+    uart_rx #(.CLK(CLK)) receiver (
         .clk(clk),
         .rxdata(rxdata),
         .rxrecv(rxrecv),

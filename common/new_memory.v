@@ -34,7 +34,7 @@ module new_memory (
    input wire [15:0] a,
    input wire [7:0] din,  // proveniente del bus de datos de salida de la CPU
    output reg [7:0] dout, // hacia el bus de datos de entrada de la CPU
-   output reg oe_n,       // el dato es valido
+   output reg oe,         // el dato es valido
    input wire mreq_n,
    input wire iorq_n,
    input wire rd_n,
@@ -478,31 +478,31 @@ module new_memory (
    always @* begin
       if (!oe_bootrom_n) begin
          dout = bootrom_dout;
-         oe_n = 1'b0;
+         oe = 1'b1;
       end
       else if (!initial_boot_mode && inhibit_rom && a[15:14]==2'b00) begin
-         oe_n = 1'b0;
+         oe = 1'b1;
          dout = din_external;
       end
       else if (!oe_memory_n) begin
          dout = ram_dout;
-         oe_n = 1'b0;
+         oe = 1'b1;
       end
       else if (enable_timexmmu && iorq_n == 1'b0 && rd_n == 1'b0 && `ADDR_TIMEX_MMU) begin
-         oe_n = 1'b0;
+         oe = 1'b1;
          dout = timex_mmu;
       end
       else if (addr==MASTERCONF && ior) begin
          dout = {masterconf_frozen,timing_mode[1],disable_cont,timing_mode[0],issue2_keyboard,divmmc_nmi_is_disabled,divmmc_is_enabled,initial_boot_mode};
-         oe_n = 1'b0;
+         oe = 1'b1;
       end
       else if (addr==MASTERMAPPER && ior) begin
          dout = {1'b0,mastermapper};
-         oe_n = 1'b0;
+         oe = 1'b1;
       end
       else begin
-         dout = 8'hZZ;
-         oe_n = 1'b1;
+         dout = 8'hFF;
+         oe = 1'b0;
       end
    end
 

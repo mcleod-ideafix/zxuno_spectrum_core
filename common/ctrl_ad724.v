@@ -30,15 +30,16 @@ module control_ad724 (
     input wire zxuno_regrd,
     input wire zxuno_regwr,
     input wire [7:0] din,
-    output reg [7:0] dout,
-    output wire oe_n,
+    output wire [7:0] dout,
+    output wire oe,
     output wire ad724_xtal,
     output wire ad724_mode
     );
 
 `include "config.vh"
     
-    assign oe_n = ~(zxuno_addr == CTRLAD724 && zxuno_regrd == 1'b1);    
+    assign oe = (zxuno_addr == CTRLAD724 && zxuno_regrd == 1'b1);    
+    assign dout = ad724;
     
     reg [7:0] ad724 = 8'h00;  // initial value
     assign ad724_xtal = ~ad724[0];
@@ -49,6 +50,5 @@ module control_ad724 (
             ad724 <= 8'h00;  // or after a hardware reset (not implemented yet)
         else if (zxuno_addr == CTRLAD724 && zxuno_regwr == 1'b1)
             ad724 <= din;
-        dout <= ad724;
     end
 endmodule

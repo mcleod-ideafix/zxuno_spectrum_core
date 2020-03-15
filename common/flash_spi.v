@@ -34,7 +34,7 @@ module flash_and_sd (
    input wire iow,         // escritura a un registro ZXUNO
    input wire [7:0] din,   // del bus de datos de salida de la CPU
    output wire [7:0] dout, // al bus de datos de entrada de la CPU
-   output wire oe_n,       // el dato en dout es válido
+   output wire oe,         // el dato en dout es válido
    output wire wait_n,     // pausa para la CPU. Mejora estabilidad
    
    input wire in_boot_mode,// Esta interfaz sólo es válida en modo boot
@@ -46,7 +46,7 @@ module flash_and_sd (
    input wire disable_spisd,
    output wire sd_cs_n,    //
    output wire sd_clk,     // Interface SPI con la SD/MMC
-   output wire sd_mosi,    // (de momento, solo puertos ZXMMC)
+   output wire sd_mosi,    // 
    input wire sd_miso      //
    );
 
@@ -97,16 +97,17 @@ module flash_and_sd (
    // Instanciación del modulo SPI   
    spi mi_spi (
       .clk(clk),
+      .clken(1'b1),
       .enviar_dato(enviar_dato),
       .recibir_dato(recibir_dato),
       .din(din),
       .dout(dout),
-      .oe_n(oe_n),
+      .oe(oe),
       .spi_transfer_in_progress(spi_transfer_in_progress),
    
-      .spi_clk(sclk),
-      .spi_di(mosi),
-      .spi_do(miso)
+      .sclk(sclk),
+      .mosi(mosi),
+      .miso(miso)
       );
     
 endmodule

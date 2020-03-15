@@ -22,7 +22,7 @@
 //
 //    Any distributed copy of this file must keep this notice intact.
 
-`define MSBI 10 // Most significant Bit of DAC input
+`define MSBI 8 // Most significant Bit of DAC input
 
 //This is a Delta-Sigma Digital to Analog Converter
 module dac (DACout, DACin, Clk, Reset);
@@ -89,7 +89,7 @@ module panner_and_mixer (
   input wire wr_n,
   input wire [7:0] din,
   output reg [7:0] dout,
-  output reg oe_n,
+  output reg oe,
   //--- SOUND SOURCES ---
   input wire mic,
   input wire ear,
@@ -112,10 +112,10 @@ module panner_and_mixer (
 `include "config.vh"
 
   // Register accepts data from CPU
-  reg [7:0] mixer = 8'b11111111; // monoaural mode, Specdrum and beeper on both channels
+  reg [7:0] mixer = 8'b10_01_11_11; // ACB mode, Specdrum and beeper on both channels
   always @(posedge clk) begin
     if (mrst_n == 1'b0)
-      mixer <= 8'b11111111;
+      mixer <= 8'b10_01_11_11;
     else if (a == AUDIOMIXER && iorq_n == 1'b0 && wr_n == 1'b0)
       mixer <= din;
   end
@@ -124,9 +124,9 @@ module panner_and_mixer (
   always @* begin
     dout = mixer;
     if (a == 8'hF7 && iorq_n == 1'b0 && rd_n == 1'b0)
-      oe_n = 1'b0;
+      oe = 1'b1;
     else
-      oe_n = 1'b1;
+      oe = 1'b0;
   end
    
   // Mixer for EAR, MIC and SPK
@@ -146,7 +146,7 @@ module panner_and_mixer (
   
   reg [10:0] mixleft = 11'h000;
   reg [10:0] mixright = 11'h000;
-  reg [10:0] left, right;
+  reg [8:0] left, right;
 //  reg [7:0] compressor[0:2047];
 //  initial $readmemh ("curva_compress.hex", compressor);
   
@@ -196,8 +196,8 @@ module panner_and_mixer (
                 ((mixer[4])? ay1_chb_signed + ay2_chb_signed : 11'h000 ) +
                 ((mixer[2])? ay1_chc_signed + ay2_chc_signed : 11'h000 ) +
                 ((mixer[0])? beeper_signed + midi_right_signed + specdrum_signed: 11'h000 );
-    left <= mixleft; //[10:3];
-    right <= mixright; //[10:3];
+    left <= mixleft[10:2];
+    right <= mixright[10:2];
   end
 
    // DACs

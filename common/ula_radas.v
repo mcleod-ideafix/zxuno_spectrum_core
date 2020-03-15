@@ -28,7 +28,7 @@ module ula_radas (
     input wire sysclk,
 	  input wire clk14en,
 	  input wire clk7en,
-		input wire clk7nen,
+		input wire clk7en_n,
 	  input wire clk35en,
 	  input wire clk35en_n,
     output wire CPUContention,
@@ -220,23 +220,28 @@ module ula_radas (
     reg [7:0] BitmapSerializer = 8'h00;
     wire SerialOutput = BitmapSerializer[7];
     always @(posedge sysclk) begin
-      if (clk7en) begin
-        if (SerializerLoad)
+      if (clk7en == 1'b1) begin
+        if (SerializerLoad == 1'b1)
            BitmapSerializer <= BitmapData;
         else
            BitmapSerializer <= {BitmapSerializer[6:0],1'b0};
       end
     end
     
+    reg clkhalf14 = 1'b0;
+    always @(posedge sysclk)
+      if (clk14en == 1'b1)
+        clkhalf14 <= ~clkhalf14;    
+        
     // BitmapSerializerHR register
     reg [15:0] BitmapSerializerHR = 8'h00;
     wire SerialOutputHR = BitmapSerializerHR[15];
     always @(posedge sysclk) begin
-      if (clk14en) begin
-        if (SerializerLoad)
-           BitmapSerializerHR <= {BitmapData,AttrData};
+      if (clk14en == 1'b1) begin
+        if (SerializerLoad == 1'b1 && clkhalf14 == 1'b1)
+          BitmapSerializerHR <= {BitmapData,AttrData};
         else
-           BitmapSerializerHR <= {BitmapSerializerHR[14:0],1'b0};
+          BitmapSerializerHR <= {BitmapSerializerHR[14:0],1'b0};
       end
     end
     
@@ -742,7 +747,7 @@ module ula_radas (
 
     reg MayContend_n;
     always @(posedge sysclk) begin  // esto era negedge clk7 en el esquemático
-      if (clk7nen) begin
+      if (clk7en_n) begin
         if (hc[3:0]>4'd3 && Border_n==1'b1)
           MayContend_n <= 1'b0;
         else

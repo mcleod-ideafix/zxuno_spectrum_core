@@ -101,101 +101,101 @@ module scancode_to_speccy (
     wire [2:0] modifiers = {alt_pressed, ctrl_pressed, shift_pressed};
     
     always @(posedge clk) begin
-        if (scan_received == 1'b1)
-            key_is_pending <= 1'b1;
-        if (rst == 1'b1 || (kbclean == 1'b1 && state == IDLE && key_is_pending == 1'b0))
-            state <= CLEANMATRIX;
-        else begin
-            case (state)
-                CLEANMATRIX: begin  //TODO: para evitar tener que usar el limpiador de teclado, hay que modificar esta FSM para que cuando se suelte una tecla, no solo actualice la matriz para esa combinación de tecla+modificadores, sino también para las otras 7 combinaciones.
-                    row[0] <= 5'b11111;
-                    row[1] <= 5'b11111;
-                    row[2] <= 5'b11111;
-                    row[3] <= 5'b11111;
-                    row[4] <= 5'b11111;
-                    row[5] <= 5'b11111;
-                    row[6] <= 5'b11111;
-                    row[7] <= 5'b11111;
-                    if (cpuread == 1'b1 || cpuwrite == 1'b1 || rewind == 1'b1)
-                        state <= CPUTIME;
-                    else
-                        state <= IDLE;
-                end
-                IDLE: begin
-                    if (key_is_pending == 1'b1) begin
-                        addr <= {modifiers, extended, scan};  // 1 scan tiene 7 bits + 1 bit para indicar scan extendido + 3 bits para el modificador usado
-                        state <= READSPKEY;
-                        key_is_pending <= 1'b0;
-                    end
-                    else if (cpuread == 1'b1 || cpuwrite == 1'b1 || rewind == 1'b1)
-                        state <= CPUTIME;
-                end
-                READSPKEY: begin
-                    {keyrow1,keycol1} <= keymap1[addr];
-                    {keyrow2,keycol2} <= keymap2[addr];
-                    state <= TRANSLATE1;
-                end
-                TRANSLATE1: begin
-                    // Actualiza las 8 semifilas del teclado con la primera tecla
-                    if (~released) begin            
-                      row[keyrow1] <= row[keyrow1] & ~keycol1;
-                    end
-                    else begin
-                      row[keyrow1] <= row[keyrow1] | keycol1;
-                    end
-                    state <= TRANSLATE2;
-                end
-                TRANSLATE2: begin
-                    // Actualiza las 8 semifilas del teclado con la segunda tecla
-                    if (~released) begin            
-                      row[keyrow2] <= row[keyrow2] & ~keycol2;
-                    end
-                    else begin
-                      row[keyrow2] <= row[keyrow2] | keycol2;
-                    end
-									  state <= IDLE;
-                end
-                CPUTIME: begin            
-                    if (rewind == 1'b1) begin
-                        cpuaddr <= 12'h0000;
-                        state <= IDLE;
-                    end
-                    else if (cpuread == 1'b1) begin
-                        addr <= cpuaddr[11:1];
-                        state <= CPUREAD;
-                    end
-                    else if (cpuwrite == 1'b1) begin
-                        addr <= cpuaddr[11:1];
-                        state <= CPUWRITE;
-                    end
-                    else
-                        state <= IDLE;
-                end
-                CPUREAD: begin   // CPU wants to read from keymap
-                    if (cpuaddr[0] == 1'b0)
-                      dout <= keymap1[addr];
-                    else
-                      dout <= keymap1[addr];
-                    state <= CPUINCADD;
-                end
-                CPUWRITE: begin
-                    if (cpuaddr[0] == 1'b0)
-                      keymap1[addr] <= din;
-                    else
-                      keymap2[addr] <= din;
-                    state <= CPUINCADD;
-                end
-                CPUINCADD: begin
-                    if (cpuread == 1'b0 && cpuwrite == 1'b0) begin
-                        cpuaddr <= cpuaddr + 12'd1;
-                        state <= IDLE;
-                    end
-                end
-                default: begin
-                    state <= IDLE;
-                end
-            endcase
-        end
+      if (scan_received == 1'b1)
+          key_is_pending <= 1'b1;
+      if (rst == 1'b1 || (kbclean == 1'b1 && state == IDLE && key_is_pending == 1'b0))
+          state <= CLEANMATRIX;
+      else begin
+          case (state)
+              CLEANMATRIX: begin  //TODO: para evitar tener que usar el limpiador de teclado, hay que modificar esta FSM para que cuando se suelte una tecla, no solo actualice la matriz para esa combinación de tecla+modificadores, sino también para las otras 7 combinaciones.
+                  row[0] <= 5'b11111;
+                  row[1] <= 5'b11111;
+                  row[2] <= 5'b11111;
+                  row[3] <= 5'b11111;
+                  row[4] <= 5'b11111;
+                  row[5] <= 5'b11111;
+                  row[6] <= 5'b11111;
+                  row[7] <= 5'b11111;
+                  if (cpuread == 1'b1 || cpuwrite == 1'b1 || rewind == 1'b1)
+                      state <= CPUTIME;
+                  else
+                      state <= IDLE;
+              end
+              IDLE: begin
+                  if (key_is_pending == 1'b1) begin
+                      addr <= {modifiers, extended, scan};  // 1 scan tiene 7 bits + 1 bit para indicar scan extendido + 3 bits para el modificador usado
+                      state <= READSPKEY;
+                      key_is_pending <= 1'b0;
+                  end
+                  else if (cpuread == 1'b1 || cpuwrite == 1'b1 || rewind == 1'b1)
+                      state <= CPUTIME;
+              end
+              READSPKEY: begin
+                  {keyrow1,keycol1} <= keymap1[addr];
+                  {keyrow2,keycol2} <= keymap2[addr];
+                  state <= TRANSLATE1;
+              end
+              TRANSLATE1: begin
+                  // Actualiza las 8 semifilas del teclado con la primera tecla
+                  if (~released) begin            
+                    row[keyrow1] <= row[keyrow1] & ~keycol1;
+                  end
+                  else begin
+                    row[keyrow1] <= row[keyrow1] | keycol1;
+                  end
+                  state <= TRANSLATE2;
+              end
+              TRANSLATE2: begin
+                  // Actualiza las 8 semifilas del teclado con la segunda tecla
+                  if (~released) begin            
+                    row[keyrow2] <= row[keyrow2] & ~keycol2;
+                  end
+                  else begin
+                    row[keyrow2] <= row[keyrow2] | keycol2;
+                  end
+                  state <= IDLE;
+              end
+              CPUTIME: begin            
+                  if (rewind == 1'b1) begin
+                      cpuaddr <= 12'h0000;
+                      state <= IDLE;
+                  end
+                  else if (cpuread == 1'b1) begin
+                      addr <= cpuaddr[11:1];
+                      state <= CPUREAD;
+                  end
+                  else if (cpuwrite == 1'b1) begin
+                      addr <= cpuaddr[11:1];
+                      state <= CPUWRITE;
+                  end
+                  else
+                      state <= IDLE;
+              end
+              CPUREAD: begin   // CPU wants to read from keymap
+                  if (cpuaddr[0] == 1'b0)
+                    dout <= keymap1[addr];
+                  else
+                    dout <= keymap1[addr];
+                  state <= CPUINCADD;
+              end
+              CPUWRITE: begin
+                  if (cpuaddr[0] == 1'b0)
+                    keymap1[addr] <= din;
+                  else
+                    keymap2[addr] <= din;
+                  state <= CPUINCADD;
+              end
+              CPUINCADD: begin
+                  if (cpuread == 1'b0 && cpuwrite == 1'b0) begin
+                      cpuaddr <= cpuaddr + 12'd1;
+                      state <= IDLE;
+                  end
+              end
+              default: begin
+                  state <= IDLE;
+              end
+          endcase
+      end
     end
 endmodule	
 
@@ -216,9 +216,9 @@ module keyboard_pressed_status (
     end
     
 		always @(posedge clk)
-		  kbclean <= ~(|keybstat);
+      kbclean <= ~(|keybstat);
 		
-    always @(posedge clk) begin		  
+    always @(posedge clk) begin		    
       if (rst == 1'b1)
         keybstat <= 256'h0;
       else if (scan_received == 1'b1)

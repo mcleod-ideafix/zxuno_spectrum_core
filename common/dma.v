@@ -32,7 +32,7 @@ module dma (
   input wire zxuno_regwr,
   input wire [7:0] din,
   output reg [7:0] dout,
-  output reg oe_n,
+  output reg oe,
   //---- DMA bus -----
   input wire m1_n,
   output reg busrq_n,
@@ -83,35 +83,35 @@ module dma (
 
   // CPU reads DMA registers
   always @* begin
-    oe_n = 1'b1;
+    oe = 1'b0;
     dout = 8'hFF;
     if (zxuno_addr == DMACTRL && zxuno_regrd == 1'b1) begin
       dout = {3'b000, select_addr_to_reach, srcdst, mode};
-      oe_n = 1'b0;
+      oe = 1'b1;
     end
     else if (zxuno_addr == DMASTAT && zxuno_regrd == 1'b1) begin
       dout = {addr_is_reached,7'b0000000};
-      oe_n = 1'b0;
+      oe = 1'b1;
     end
     else if (zxuno_addr == DMASRC && zxuno_regrd == 1'b1) begin
       dout = (hilo)? src[15:8]:src[7:0];
-      oe_n = 1'b0;
+      oe = 1'b1;
     end
     else if (zxuno_addr == DMADST && zxuno_regrd == 1'b1) begin
       dout = (hilo)? dst[15:8]:dst[7:0];
-      oe_n = 1'b0;
+      oe = 1'b1;
     end
     else if (zxuno_addr == DMAPRE && zxuno_regrd == 1'b1) begin
       dout = (hilo)? preescaler[15:8]:preescaler[7:0];
-      oe_n = 1'b0;
+      oe = 1'b1;
     end
     else if (zxuno_addr == DMALEN && zxuno_regrd == 1'b1) begin
       dout = (hilo)? transferlength[15:8]:transferlength[7:0];
-      oe_n = 1'b0;
+      oe = 1'b1;
     end    
     else if (zxuno_addr == DMAPROB && zxuno_regrd == 1'b1) begin
       dout = (hilo)? addrtoreach[15:8]:addrtoreach[7:0];
-      oe_n = 1'b0;
+      oe = 1'b1;
     end
   end
 

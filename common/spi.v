@@ -29,7 +29,7 @@ module spi (
    input wire recibir_dato,// a 1 para indicar que queremos recibir un dato
    input wire [7:0] din,   // del bus de datos de salida de la CPU
    output reg [7:0] dout,  // al bus de datos de entrada de la CPU
-   output reg oe_n,        // el dato en dout es válido
+   output reg oe,        // el dato en dout es válido
    output reg spi_transfer_in_progress,
    
    output wire spi_clk,    // Interface SPI
@@ -104,11 +104,11 @@ module spi (
    always @* begin
       if (recibir_dato) begin
          dout = data_to_cpu;
-         oe_n = 1'b0;
+         oe = 1'b1;
       end
       else begin
          dout = 8'hZZ;
-         oe_n = 1'b1;
+         oe = 1'b0;
       end
    end   
 endmodule

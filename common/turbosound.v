@@ -33,8 +33,8 @@ module turbosound (
     input wire bdir,
     input wire bc1,
     input wire [7:0] din,
-    output wire [7:0] dout,
-    output wire oe_n,
+    output reg [7:0] dout,
+    output reg oe,
     output reg midi_out,
     output wire [7:0] audio_out_ay1,
     output wire [7:0] audio_out_ay2,
@@ -42,41 +42,38 @@ module turbosound (
     output wire [23:0] audio_out_ay2_splitted
     );
 
+  // TurboSound AY selection logic: uses non-existent AY reg addresses 0xFF and 0xFE 
+  // (actually, address 0b1111111x where x=1 for first AY, x=0 for second AY)
 	reg ay_select = 1'b1;
 	always @(posedge clk) begin
 		if (reset_n==1'b0)
-			ay_select <= 1'b1;
-		else if (disable_ay == 1'b0 && disable_turboay == 1'b0 && bdir && bc1 && din[7:1]==7'b1111111)
+			ay_select <= 1'b1;    
+		else if (disable_ay == 1'b0 && disable_turboay == 1'b0 && bdir && bc1 && din[7:1]==7'b1111111)  // AY address selection
 			ay_select <= din[0];  // 1: select first AY, 0: select second AY
 	end
 
 	wire oe_n_ay1, oe_n_ay2;
 	wire [7:0] dout_ay1, dout_ay2;
-	assign dout = (ay_select)? dout_ay1 : dout_ay2;
-	assign oe_n = (ay_select && !disable_ay)? oe_n_ay1 : 
-                (!ay_select && !disable_ay && !disable_turboay)? oe_n_ay2 :
-                 1'b1;
-
   wire [7:0] port_a_ay1, port_a_ay2;
-  wire port_a_ay1_oe_n, port_a_ay2_oe_n;
   
+  // MUX for selecting data and signals from AY 1 or AY 2
   always @* begin
-    case (ay_select)
-      1'b0: 
-        begin
-          if (port_a_ay2_oe_n == 1'b0)
-            midi_out = port_a_ay2[2];
-          else
-            midi_out = 1'b0;
-        end
-      default:
-        begin
-          if (port_a_ay1_oe_n == 1'b0)
-            midi_out = port_a_ay1[2];
-          else
-            midi_out = 1'b0;
-        end
-    endcase
+    if (ay_select == 1'b0) begin
+      midi_out = port_a_ay2[2];
+      dout = dout_ay2;
+      if (!disable_ay && !disable_turboay)
+        oe = ~oe_n_ay1;
+      else
+        oe = 1'b0;
+    end
+    else begin
+      midi_out = port_a_ay1[2];
+      dout = dout_ay1;
+      if (!disable_ay)
+        oe = ~oe_n_ay1;
+      else
+        oe = 1'b0;
+    end
   end
 
   ay_3_8192 ay1 (
@@ -95,7 +92,7 @@ module turbosound (
 	  .channel_c(audio_out_ay1_splitted[7:0]),
     .port_a_din(8'h00),
 	  .port_a_dout(port_a_ay1),
-	  .port_a_oe_n(port_a_ay1_oe_n)
+	  .port_a_oe_n()
   );
 
   ay_3_8192 ay2 (
@@ -114,59 +111,6 @@ module turbosound (
 	  .channel_c(audio_out_ay2_splitted[7:0]),
     .port_a_din(8'h00),
 	  .port_a_dout(port_a_ay2),
-	  .port_a_oe_n(port_a_ay2_oe_n)
+	  .port_a_oe_n()
   );
-
-//YM2149 ay1 (
-//  .I_DA(din),
-//  .O_DA(dout_ay1),
-//  .O_DA_OE_L(oe_n_ay1),
-//  .I_A9_L(1'b0),
-//  .I_A8(ay_select),
-//  .I_BDIR(bdir),
-//  .I_BC2(1'b1),
-//  .I_BC1(bc1),
-//  .I_SEL_L(1'b0),
-//  .O_AUDIO(audio_out_ay1),
-//  .O_AUDIO_A(audio_out_ay1_splitted[23:16]),
-//  .O_AUDIO_B(audio_out_ay1_splitted[15:8]),
-//  .O_AUDIO_C(audio_out_ay1_splitted[7:0]),
-//  .I_IOA(8'h00),
-//  .O_IOA(port_a_ay1),
-//  .O_IOA_OE_L(port_a_ay1_oe_n),
-//  .I_IOB(8'h00),
-//  .O_IOB(),
-//  .O_IOB_OE_L(),
-//  .ENA(~disable_ay & clk35en),
-//  .RESET_L(reset_n),
-//  .CLK(clk),
-//  .clkreg(clk)
-//  );
-
-//YM2149 ay2 (
-//  .I_DA(din),
-//  .O_DA(dout_ay2),
-//  .O_DA_OE_L(oe_n_ay2),
-//  .I_A9_L(1'b0),
-//  .I_A8(~ay_select),
-//  .I_BDIR(bdir),
-//  .I_BC2(1'b1),
-//  .I_BC1(bc1),
-//  .I_SEL_L(1'b0),
-//  .O_AUDIO(audio_out_ay2),
-//  .O_AUDIO_A(audio_out_ay2_splitted[23:16]),
-//  .O_AUDIO_B(audio_out_ay2_splitted[15:8]),
-//  .O_AUDIO_C(audio_out_ay2_splitted[7:0]),
-//  .I_IOA(8'h00),
-//  .O_IOA(port_a_ay2),
-//  .O_IOA_OE_L(port_a_ay2_oe_n),
-//  .I_IOB(8'h00),
-//  .O_IOB(),
-//  .O_IOB_OE_L(),
-//  .ENA(~disable_ay & ~disable_turboay & clk35en),
-//  .RESET_L(reset_n),
-//  .CLK(clk),
-//  .clkreg(clk)
-//  );
-
 endmodule

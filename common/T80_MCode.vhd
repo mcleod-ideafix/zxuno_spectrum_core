@@ -1174,7 +1174,7 @@ begin
 			case to_integer(unsigned(MCycle)) is
 			when 1 =>
 				--TStates <= "101";
-				Set_Addr_TO <= aSP;
+				Set_Addr_To <= aSP;
 			when 2 =>
 				IncDec_16 <= "0111";
 				Set_Addr_To <= aSP;

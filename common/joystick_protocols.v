@@ -31,7 +31,7 @@ module joystick_protocols(
     input wire rd_n,
     input wire [7:0] din,
     output reg [7:0] dout,
-    output reg oe_n,
+    output reg oe,
     //-- interface with ZXUNO reg bank
     input wire [7:0] zxuno_addr,
     input wire zxuno_regrd,
@@ -100,16 +100,16 @@ module joystick_protocols(
     wire db9joyfire_processed = (joyconf[7]==1'b0)? db9joyfire : db9joyfire & autofire;
     
     always @* begin
-        oe_n = 1'b1;
-        dout = 8'hZZ;
+        oe = 1'b0;
+        dout = 8'hFF;
         kbdcol_out = kbdcol_in;
         if (zxuno_addr==JOYCONFADDR && zxuno_regrd==1'b1) begin
-            oe_n = 1'b0;
+            oe = 1'b1;
             dout = joyconf;
         end
         else if (iorq_n == 1'b0 && a[7:0]==KEMPSTONADDR && rd_n==1'b0) begin
             dout = 8'h00;
-            oe_n = 1'b0;
+            oe = 1'b1;
             if (joyconf[2:0]==KEMPSTON)
                 dout = dout | {3'b000, kbdjoyfire_processed, kbdjoyup, kbdjoydown, kbdjoyleft, kbdjoyright};
             if (joyconf[6:4]==KEMPSTON)
@@ -117,7 +117,7 @@ module joystick_protocols(
         end
         else if (iorq_n == 1'b0 && a[7:0]==FULLERADDR && rd_n==1'b0) begin
             dout = 8'hFF;
-            oe_n = 1'b0;
+            oe = 1'b1;
             if (joyconf[2:0]==FULLER)
                 dout = dout & {~kbdjoyfire_processed, 3'b111, ~kbdjoyright, ~kbdjoyleft, ~kbdjoydown, ~kbdjoyup};
             if (joyconf[6:4]==FULLER)

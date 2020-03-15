@@ -24,7 +24,8 @@
 //    Any distributed copy of this file must keep this notice intact.
 
 module vga_scandoubler (
-  input wire clkvga,
+  input wire clk,
+  input wire clk14en,
   input wire enable_scandoubling,
   input wire disable_scaneffect,  // 1 to disable scanlines
   input wire [2:0] ri,
@@ -56,15 +57,12 @@ module vga_scandoubler (
   // Memoria de doble puerto que guarda la información de dos scans
   // Cada scan puede ser de hasta 1024 puntos, incluidos aquí los
   // puntos en negro que se pintan durante el HBlank
-  reg div = 1'b0;
-  always @(posedge clkvga)
-    div <= ~div;
 
   vgascanline_dport memscan (
-    .clk(clkvga),
+    .clk(clk),
     .addrwrite(addrvideo),
     .addrread(addrvga),
-    .we(div),
+    .we(clk14en),
     .din({ri,gi,bi}),
     .dout({rout,gout,bout})
   );
@@ -83,8 +81,8 @@ module vga_scandoubler (
   // Cambio de mitad cada vez que encuentro un pulso de sincronismo horizontal
   // En "totalhor" mido el número de ciclos de reloj que hay en un scan
   reg hsync_ext_n_prev = 1'b1;
-  always @(posedge clkvga) begin
-    if (div) begin
+  always @(posedge clk) begin
+    if (clk14en == 1'b1) begin
       hsync_ext_n_prev <= hsync_ext_n;
       if (hsync_ext_n == 1'b0 && hsync_ext_n_prev == 1'b1) begin
         totalhor <= addrvideo[9:0];
@@ -105,18 +103,18 @@ module vga_scandoubler (
   // reducido para un efecto chachi de scanlines en la VGA
  
   reg hsync_ext_n_prev2 = 1'b1;
-  always @(posedge clkvga) begin
-    hsync_ext_n_prev2 <= hsync_ext_n;
-    if (addrvga[9:0] == totalhor && hsync_ext_n == 1'b1 && hsync_ext_n_prev2 == 1'b1) begin
-       addrvga <= {addrvga[10], 10'b000000000};
-       scaneffect <= ~scaneffect;
-    end
-    else if (hsync_ext_n == 1'b0 && hsync_ext_n_prev2 == 1'b1 /*&& addrvga[9] == 1'b0*/) begin
-      addrvga <= {addrvideo[10],10'b000000000};
-      scaneffect <= ~scaneffect;
-    end
-    else
-      addrvga <= addrvga + 11'd1;
+  always @(posedge clk) begin
+      hsync_ext_n_prev2 <= hsync_ext_n;
+      if (addrvga[9:0] == totalhor && hsync_ext_n == 1'b1 && hsync_ext_n_prev2 == 1'b1) begin
+         addrvga <= {addrvga[10], 10'b000000000};
+         scaneffect <= ~scaneffect;
+      end
+      else if (hsync_ext_n == 1'b0 && hsync_ext_n_prev2 == 1'b1 /*&& addrvga[9] == 1'b0*/) begin
+        addrvga <= {addrvideo[10],10'b000000000};
+        scaneffect <= ~scaneffect;
+      end
+      else
+        addrvga <= addrvga + 11'd1;
   end
 
   // El HSYNC de la VGA está bajo sólo durante HSYNC_COUNT ciclos a partir del comienzo
@@ -134,23 +132,23 @@ module vga_scandoubler (
   // bajada de la señal de sincronismo vertical original
   reg [15:0] cntvsync = 16'hFFFF;
   initial vsync_vga = 1'b1;
-  always @(posedge clkvga) begin
-    if (vsync_ext_n == 1'b0) begin
-      if (cntvsync == 16'hFFFF) begin
-        cntvsync <= 16'd0;
-        vsync_vga <= 1'b0;
-      end
-      else if (cntvsync != 16'hFFFE) begin
-        if (cntvsync == VSYNC_COUNT[15:0]) begin
-          vsync_vga <= 1'b1;
-          cntvsync <= 16'hFFFE;
+  always @(posedge clk) begin
+      if (vsync_ext_n == 1'b0) begin
+        if (cntvsync == 16'hFFFF) begin
+          cntvsync <= 16'd0;
+          vsync_vga <= 1'b0;
         end
-        else
-          cntvsync <= cntvsync + 16'd1;
+        else if (cntvsync != 16'hFFFE) begin
+          if (cntvsync == VSYNC_COUNT[15:0]) begin
+            vsync_vga <= 1'b1;
+            cntvsync <= 16'hFFFE;
+          end
+          else
+            cntvsync <= cntvsync + 16'd1;
+        end
       end
-    end
-    else if (vsync_ext_n == 1'b1)
-      cntvsync <= 16'hFFFF;
+      else if (vsync_ext_n == 1'b1)
+        cntvsync <= 16'hFFFF;
   end
 
   always @* begin

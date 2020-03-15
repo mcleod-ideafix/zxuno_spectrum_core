@@ -43,11 +43,11 @@ module ps2_keyb(
     input wire regaddr_changed,
     input wire [7:0] din,
     output wire [7:0] keymap_dout,
-    output wire oe_n_keymap,
+    output wire oe_keymap,
     output wire [7:0] scancode_dout,
-    output wire oe_n_scancode,
+    output wire oe_scancode,
     output reg [7:0] kbstatus_dout,
-    output wire oe_n_kbstatus
+    output wire oe_kbstatus
     );
 
 `include "config.vh"
@@ -57,9 +57,9 @@ module ps2_keyb(
     assign rst_out_n = ~user_reset;
     assign nmi_out_n = ~user_nmi;
     
-    assign oe_n_keymap = ~(zxuno_addr == KEYMAP && zxuno_regrd == 1'b1);
-    assign oe_n_scancode = ~(zxuno_addr == SCANCODE && zxuno_regrd == 1'b1);
-    assign oe_n_kbstatus = ~(zxuno_addr == KBSTATUS && zxuno_regrd == 1'b1);
+    assign oe_keymap = (zxuno_addr == KEYMAP && zxuno_regrd == 1'b1);
+    assign oe_scancode = (zxuno_addr == SCANCODE && zxuno_regrd == 1'b1);
+    assign oe_kbstatus = (zxuno_addr == KBSTATUS && zxuno_regrd == 1'b1);
 
     wire [7:0] kbcode;
     wire ps2busy;
@@ -76,16 +76,16 @@ module ps2_keyb(
     */
     reg reading_kbstatus = 1'b0;
     always @(posedge clk) begin
-        kbstatus_dout[7:1] <= {ps2busy, 3'b000, kberror, released, extended};
-        if (nueva_tecla == 1'b1) begin
-            kbstatus_dout[0] <= 1'b1;
-        end
-        if (oe_n_kbstatus == 1'b0)
-            reading_kbstatus <= 1'b1;
-        else if (reading_kbstatus == 1'b1) begin
-            kbstatus_dout[0] <= 1'b0;
-            reading_kbstatus <= 1'b0;
-        end
+      kbstatus_dout[7:1] <= {ps2busy, 3'b000, kberror, released, extended};
+      if (nueva_tecla == 1'b1) begin
+          kbstatus_dout[0] <= 1'b1;
+      end
+      if (oe_kbstatus == 1'b1)
+          reading_kbstatus <= 1'b1;
+      else if (reading_kbstatus == 1'b1) begin
+          kbstatus_dout[0] <= 1'b0;
+          reading_kbstatus <= 1'b0;
+      end
     end        
 
     ps2_port lectura_de_teclado (

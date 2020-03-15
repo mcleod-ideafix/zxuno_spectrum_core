@@ -33,9 +33,9 @@ module disk_drive (
   input wire wr_n,
   input wire [7:0] din,
   output wire [7:0] dout,
-  output wire oe_n
+  output wire oe
   );
   
   assign dout = 8'hFF;
-  assign oe_n = (a[15:12] == 3'b001 && a[1] == 1'b0 && iorq_n == 1'b0 && wr_n == 1'b0)? 1'b0: 1'b1;
+  assign oe = (a[15:12] == 3'b001 && a[1] == 1'b0 && iorq_n == 1'b0 && wr_n == 1'b0)? 1'b1: 1'b0;
 endmodule

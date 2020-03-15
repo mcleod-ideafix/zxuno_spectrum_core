@@ -32,7 +32,7 @@ module zxunoregs (
    input wire wr_n,
    input wire [7:0] din,
    output reg [7:0] dout,
-   output reg oe_n,
+   output reg oe,
    output wire [7:0] addr,
    output wire read_from_reg,
    output wire write_to_reg,
@@ -65,11 +65,11 @@ module zxunoregs (
    always @* begin
       if (!iorq_n && a==IOADDR && !rd_n) begin
          dout = raddr;
-         oe_n = 1'b0;
+         oe = 1'b1;
       end
       else begin
          dout = 8'hZZ;
-         oe_n = 1'b1;
+         oe = 1'b0;
       end
    end
    

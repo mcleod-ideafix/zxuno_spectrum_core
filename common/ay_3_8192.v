@@ -25,46 +25,46 @@
 
 module ay_3_8192 (
   input wire clk,
-	input wire clken,
-	input wire rst_n,
-	input wire a8,
-	input wire bdir,
-	input wire bc1,
-	input wire bc2,
-	input wire [7:0] din,
-	output reg [7:0] dout,
-	output reg oe_n,
-	output reg [7:0] channel_a,
-	output reg [7:0] channel_b,
-	output reg [7:0] channel_c,
+  input wire clken,
+  input wire rst_n,
+  input wire a8,
+  input wire bdir,
+  input wire bc1,
+  input wire bc2,
+  input wire [7:0] din,
+  output reg [7:0] dout,
+  output reg oe_n,
+  output reg [7:0] channel_a,
+  output reg [7:0] channel_b,
+  output reg [7:0] channel_c,
   input wire [7:0] port_a_din,
-	output wire [7:0] port_a_dout,
-	output wire port_a_oe_n
+  output wire [7:0] port_a_dout,
+  output wire port_a_oe_n
   );
-	
-	reg [11:0] period_a, period_b, period_c;
-	reg [4:0] noise_period;
-	reg [7:0] enable_chan;
+  
+  reg [11:0] period_a, period_b, period_c;
+  reg [4:0] noise_period;
+  reg [7:0] enable_chan;
     wire input_enable_b_n = enable_chan[7];
-	  wire input_enable_a_n = enable_chan[6];
-		assign port_a_oe_n    = ~enable_chan[6];  // signal that data at PORT_A is valid because it is configured as an output port	  
-		wire enable_noise_c_n = enable_chan[5];
-		wire enable_noise_b_n = enable_chan[4];
-		wire enable_noise_a_n = enable_chan[3];
-		wire enable_tone_c_n  = enable_chan[2];
-		wire enable_tone_b_n  = enable_chan[1];
-		wire enable_tone_a_n  = enable_chan[0];
-	reg ampmode_a, ampmode_b, ampmode_c;
-	reg [3:0] amp_a, amp_b, amp_c;
-	reg [15:0] envelope_period;
-	reg [3:0] envelope_shape;
-	  wire cont   = envelope_shape[3];
-		wire attack = envelope_shape[2];
-		wire altern = envelope_shape[1];
-		wire hold   = envelope_shape[0];
-	reg [7:0] reg_port_a, reg_port_b;
-	assign port_a_dout = reg_port_a;
-	reg [7:0] regaddr;
+    wire input_enable_a_n = enable_chan[6];
+    assign port_a_oe_n    = ~enable_chan[6];  // signal that data at PORT_A is valid because it is configured as an output port   
+    wire enable_noise_c_n = enable_chan[5];
+    wire enable_noise_b_n = enable_chan[4];
+    wire enable_noise_a_n = enable_chan[3];
+    wire enable_tone_c_n  = enable_chan[2];
+    wire enable_tone_b_n  = enable_chan[1];
+    wire enable_tone_a_n  = enable_chan[0];
+  reg ampmode_a, ampmode_b, ampmode_c;
+  reg [3:0] amp_a, amp_b, amp_c;
+  reg [15:0] envelope_period;
+  reg [3:0] envelope_shape;
+    wire cont   = envelope_shape[3];
+    wire attack = envelope_shape[2];
+    wire altern = envelope_shape[1];
+    wire hold   = envelope_shape[0];
+  reg [7:0] reg_port_a, reg_port_b;
+  assign port_a_dout = reg_port_a;
+  reg [7:0] regaddr;
 
   initial begin
     regaddr         = 4'h0;
@@ -84,37 +84,37 @@ module ay_3_8192 (
     reg_port_a      = 8'h00;
     reg_port_b      = 8'h00;
   end
-	
-	////////////// CPU interface /////////////////////////////////////////
-	
-	// CPU writes
-	always @(posedge clk) begin
-	  if (rst_n == 1'b0) begin
-		  regaddr         <= 4'h0;
-		  period_a        <= 12'h000;
-			period_b        <= 12'h000;
-			period_c        <= 12'h000;
-			noise_period    <= 5'b00000;
-			enable_chan     <= 8'hFF;
-			ampmode_a       <= 1'b0;
-			ampmode_b       <= 1'b0;
-			ampmode_c       <= 1'b0;
-			amp_a           <= 4'b0000;
-			amp_b           <= 4'b0000;
-			amp_c           <= 4'b0000;
-			envelope_period <= 16'h0000;
-			envelope_shape  <= 4'b0000;
-			reg_port_a      <= 8'h00;
-			reg_port_b      <= 8'h00;
-		end
-		else begin	
-	    if (a8 == 1'b1) begin
-		    case ({bdir,bc2,bc1})
-			    3'b001,
-				  3'b100,
-				  3'b111: regaddr <= din;  // latch PSG register address (all of it, including bits that are not used in register selection)
-					3'b110: 
-					  begin // write to currently addressed PSG register
+  
+  ////////////// CPU interface /////////////////////////////////////////
+  
+  // CPU writes
+  always @(posedge clk) begin
+    if (rst_n == 1'b0) begin
+      regaddr         <= 4'h0;
+      period_a        <= 12'h000;
+      period_b        <= 12'h000;
+      period_c        <= 12'h000;
+      noise_period    <= 5'b00000;
+      enable_chan     <= 8'hFF;
+      ampmode_a       <= 1'b0;
+      ampmode_b       <= 1'b0;
+      ampmode_c       <= 1'b0;
+      amp_a           <= 4'b0000;
+      amp_b           <= 4'b0000;
+      amp_c           <= 4'b0000;
+      envelope_period <= 16'h0000;
+      envelope_shape  <= 4'b0000;
+      reg_port_a      <= 8'h00;
+      reg_port_b      <= 8'h00;
+    end
+    else begin  
+      if (a8 == 1'b1) begin
+        case ({bdir,bc2,bc1})
+          3'b001,
+          3'b100,
+          3'b111: regaddr <= din;  // latch PSG register address (all of it, including bits that are not used in register selection)
+          3'b110: 
+            begin // write to currently addressed PSG register
               if (regaddr[7:4] == 4'b0000) begin
                 case (regaddr[3:0])
                   4'd0 : period_a[7:0]         <= din;
@@ -135,12 +135,12 @@ module ay_3_8192 (
                   4'd15: reg_port_b            <= din;
                 endcase
               end
-						end
-				endcase
-			end
-		end
-	end
-	
+            end
+        endcase
+      end
+    end
+  end
+  
   reg reset_envelope;
   always @* begin
     if (a8 == 1'b1 && {bdir,bc2,bc1} == 3'b110 && regaddr == 8'd13)
@@ -149,12 +149,12 @@ module ay_3_8192 (
       reset_envelope = 1'b0;
   end
   
-	// CPU reads
-	always @* begin
-	  dout = 8'hFF;
-		oe_n = 1'b1;
-	  if (a8 == 1'b1) begin
-		  if ({bdir,bc2,bc1} == 3'b011) begin
+  // CPU reads
+  always @* begin
+    dout = 8'hFF;
+    oe_n = 1'b1;
+    if (a8 == 1'b1) begin
+      if ({bdir,bc2,bc1} == 3'b011) begin
         if (regaddr[7:4] == 4'b0000) begin
           oe_n = 1'b0;
           case (regaddr[3:0])
@@ -177,41 +177,41 @@ module ay_3_8192 (
             default: dout = 8'hFF;
           endcase
         end
-			end
-		end
-	end
-	
-	////////////// Tone and noise generation /////////////////////////////////////////
-	
-	reg [15:0] divprescaler = 16'h0001;	
-	wire clken_presc = divprescaler[0] | divprescaler[8];
+      end
+    end
+  end
+  
+  ////////////// Tone and noise generation /////////////////////////////////////////
+  
+  reg [15:0] divprescaler = 16'h0001; 
+  wire clken_presc = divprescaler[0] | divprescaler[8];
   wire clken_presc_env = divprescaler[0];
-	// Prescaler for note, noise and envelope generator.
-	always @(posedge clk) begin
-	  if (rst_n == 1'b0)
-		  divprescaler <= 16'h0001;
-	  else if (clken == 1'b1)
-		  divprescaler <= {divprescaler[14:0], divprescaler[15]};
-	end
-	
-	reg tone_a = 1'b0, tone_b = 1'b0, tone_c = 1'b0, tone_noise = 1'b0;
-	reg [11:0] counter_tone_a, counter_tone_b, counter_tone_c;
-	reg [4:0] counter_noise;
-	reg [16:0] noise_shiftreg = 17'h00001;
-	
-	always @(posedge clk) begin
-	  if (rst_n == 1'b0) begin
-		  tone_a <= 1'b0;
-			tone_b <= 1'b0;
-			tone_c <= 1'b0;
-			tone_noise <= 1'b0;
-			counter_tone_a <= 12'h001;
-			counter_tone_b <= 12'h001;
-			counter_tone_c <= 12'h001;
-			counter_noise <= 5'b00001;
-			noise_shiftreg <= 17'h00001;
-		end
-		else begin
+  // Prescaler for note, noise and envelope generator.
+  always @(posedge clk) begin
+    if (rst_n == 1'b0)
+      divprescaler <= 16'h0001;
+    else if (clken == 1'b1)
+      divprescaler <= {divprescaler[14:0], divprescaler[15]};
+  end
+  
+  reg tone_a = 1'b0, tone_b = 1'b0, tone_c = 1'b0, tone_noise = 1'b0;
+  reg [11:0] counter_tone_a, counter_tone_b, counter_tone_c;
+  reg [4:0] counter_noise;
+  reg [16:0] noise_shiftreg = 17'h00001;
+  
+  always @(posedge clk) begin
+    if (rst_n == 1'b0) begin
+      tone_a <= 1'b0;
+      tone_b <= 1'b0;
+      tone_c <= 1'b0;
+      tone_noise <= 1'b0;
+      counter_tone_a <= 12'h001;
+      counter_tone_b <= 12'h001;
+      counter_tone_c <= 12'h001;
+      counter_noise <= 5'b00001;
+      noise_shiftreg <= 17'h00001;
+    end
+    else begin
       if (clken == 1'b1 && clken_presc == 1'b1) begin
         // Tone generator A 
         if (counter_tone_a >= period_a) begin
@@ -251,7 +251,7 @@ module ay_3_8192 (
         end
       end // del if que guarda que sólo se hagan cosas cuando toca    
     end  // del no reset
-	end  // del always @(posedge.....)
+  end  // del always @(posedge.....)
 
   ////////////// Channel mixer /////////////////////////////////////////
 
@@ -260,9 +260,9 @@ module ay_3_8192 (
   wire tone_noise_a = (tone_a | enable_tone_a_n) & (tone_noise | enable_noise_a_n);
   wire tone_noise_b = (tone_b | enable_tone_b_n) & (tone_noise | enable_noise_b_n);
   wire tone_noise_c = (tone_c | enable_tone_c_n) & (tone_noise | enable_noise_c_n);
-	
-	////////////// Envelope generator /////////////////////////////////////////
-	
+  
+  ////////////// Envelope generator /////////////////////////////////////////
+  
   reg [3:0] envelope;
   // envelope shapes
   // C AtAlH
@@ -349,21 +349,21 @@ module ay_3_8192 (
     end
   end
   
-	////////////// Amp control /////////////////////////////////////////
-	
-	reg [3:0] linear_chan_a, linear_chan_b, linear_chan_c;
-	always @(posedge clk) begin
+  ////////////// Amp control /////////////////////////////////////////
+  
+  reg [3:0] linear_chan_a, linear_chan_b, linear_chan_c;
+  always @(posedge clk) begin
     if (clken == 1'b1) begin
-	    linear_chan_a <= ((ampmode_a == 1'b0)? amp_a : envelope) & {4{tone_noise_a}};
-		  linear_chan_b <= ((ampmode_b == 1'b0)? amp_b : envelope) & {4{tone_noise_b}};
-		  linear_chan_c <= ((ampmode_c == 1'b0)? amp_c : envelope) & {4{tone_noise_c}};
+      linear_chan_a <= ((ampmode_a == 1'b0)? amp_a : envelope) & {4{tone_noise_a}};
+      linear_chan_b <= ((ampmode_b == 1'b0)? amp_b : envelope) & {4{tone_noise_b}};
+      linear_chan_c <= ((ampmode_c == 1'b0)? amp_c : envelope) & {4{tone_noise_c}};
     end
-	end
-	
-	////////////// DAC /////////////////////////////////////////
-	
-	reg [7:0] lin2log[0:15];
-	initial begin  // valores tomados de medidas hechas en el proyecto MAME
+  end
+  
+  ////////////// DAC /////////////////////////////////////////
+  
+  reg [7:0] lin2log[0:15];
+  initial begin  // valores tomados de medidas hechas en el proyecto MAME
     lin2log[0]  = 8'd0;
     lin2log[1]  = 8'd3;
     lin2log[2]  = 8'd4;
@@ -380,9 +380,9 @@ module ay_3_8192 (
     lin2log[13] = 8'd166;
     lin2log[14] = 8'd208;
     lin2log[15] = 8'd255;
-	end
+  end
   
-//	initial begin  // lin2log[i] = 255*(16^(i/15)-1)/15
+//  initial begin  // lin2log[i] = 255*(16^(i/15)-1)/15
 //    lin2log[0]  = 8'd0;
 //    lin2log[1]  = 8'd3;
 //    lin2log[2]  = 8'd8;
@@ -399,7 +399,7 @@ module ay_3_8192 (
 //    lin2log[13] = 8'd171;
 //    lin2log[14] = 8'd209;
 //    lin2log[15] = 8'd255;
-//	end
+//  end
 
   always @(posedge clk) begin
     if (clken == 1'b1) begin
@@ -415,5 +415,5 @@ module ay_3_8192 (
 //      channel_b <= {linear_chan_b, linear_chan_b};
 //      channel_c <= {linear_chan_c, linear_chan_c};
 //    end
-//  end	
+//  end 
 endmodule

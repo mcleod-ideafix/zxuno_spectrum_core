@@ -24,62 +24,85 @@
 //    Any distributed copy of this file must keep this notice intact.
 
 module scandoubler_ctrl (
-    input wire clk,
-    input wire [15:0] a,
-    input wire kbd_change_video_output,
-    input wire kbd_turbo_boost,
-    input wire turbo_boost_allowed,
-    input wire iorq_n,
-    input wire wr_n,
-    input wire [7:0] zxuno_addr,
-    input wire zxuno_regrd,
-    input wire zxuno_regwr,
-    input wire [7:0] din,
-    output reg [7:0] dout,
-    output wire oe_n,
-    output wire vga_enable,
-    output wire scanlines_enable,
-    output wire [2:0] freq_option,
-    output wire [1:0] turbo_enable,
-    output wire csync_option
-    );
+  input wire clk,
+  input wire [15:0] a,
+  input wire kbd_change_video_output,
+  input wire kbd_turbo_boost,
+  input wire turbo_boost_allowed,
+  input wire iorq_n,
+  input wire rd_n,
+  input wire wr_n,
+  input wire [7:0] zxuno_addr,
+  input wire zxuno_regrd,
+  input wire zxuno_regwr,
+  input wire [7:0] din,
+  output reg [7:0] dout,
+  output reg oe,
+  output wire vga_enable,
+  output wire scanlines_enable,
+  output wire [2:0] freq_option,
+  output reg [3:0] cpu_speed,
+  output wire csync_option
+  );
 
 `include "config.vh"
     
-    assign oe_n = ~(zxuno_addr == SCANDBLCTRL && zxuno_regrd == 1'b1);
-    
-    reg [7:0] scandblctrl = 8'h00;  // initial value
-    reg [1:0] kbd_change_video_edge_detect = 2'b00;
-    reg [1:0] kbd_turbo_boost_edge_detect = 2'b00;
-    reg [1:0] backup_speed_settings = 2'b00;
+  reg [3:0] cpu_speed_reg = 4'b0000;
+  
+  reg [7:0] scandblctrl = 8'h00;  // initial value
+  reg kbd_change_video_edge_detect = 1'b0;
+  reg kbd_turbo_boost_edge_detect = 1'b0;
+  reg ff_toggle_turbo = 1'b0;
 
-    assign vga_enable = scandblctrl[0];
-    assign scanlines_enable = scandblctrl[1];
-    assign freq_option = scandblctrl[4:2];
-    assign turbo_enable = scandblctrl[7:6];
-    assign csync_option = scandblctrl[5];
+  assign vga_enable = scandblctrl[0];
+  assign scanlines_enable = scandblctrl[1];
+  assign freq_option = scandblctrl[4:2];
+  assign csync_option = scandblctrl[5];
+  
+  always @* begin
+    oe = 1'b0;
+    dout = 8'hFF;
+
+    if (ff_toggle_turbo == 1'b1)
+      cpu_speed = 4'b0011;
+    else
+      cpu_speed = cpu_speed_reg;
     
-    reg kbd_turbo_boost_processed = 1'b0;
-    always @(posedge clk) begin
-      if (turbo_boost_allowed == 1'b1)
-        kbd_turbo_boost_processed <= kbd_turbo_boost;
+    if (zxuno_addr == SCANDBLCTRL && zxuno_regrd == 1'b1) begin
+      oe = 1'b1;
+      if (ff_toggle_turbo == 1'b1)
+        dout = {2'b11, scandblctrl[5:0]};
+      else
+        dout = scandblctrl;
     end
-    
-    always @(posedge clk) begin
-        kbd_change_video_edge_detect <= {kbd_change_video_edge_detect[0], kbd_change_video_output};
-        kbd_turbo_boost_edge_detect <= {kbd_turbo_boost_edge_detect[0], kbd_turbo_boost_processed};
-        if (zxuno_addr == SCANDBLCTRL && zxuno_regwr == 1'b1)
-            scandblctrl <= din;
-        else if (iorq_n == 1'b0 && wr_n == 1'b0 && a == PRISMSPEEDCTRL)
-            scandblctrl <= {din[1:0], scandblctrl[5:0]};
-        else if (kbd_change_video_edge_detect == 2'b01)
-            scandblctrl <= {scandblctrl[7:5], ((scandblctrl[0] == 1'b0)? 3'b111 : 3'b000), scandblctrl[1], ~scandblctrl[0]};
-        else if (kbd_turbo_boost_edge_detect == 2'b01) begin
-            backup_speed_settings <= scandblctrl[7:6];
-            scandblctrl <= {2'b11, scandblctrl[5:0]};
-        end
-        else if (kbd_turbo_boost_edge_detect == 2'b10)
-            scandblctrl <= {backup_speed_settings, scandblctrl[5:0]};
-        dout <= scandblctrl;
+    else if (iorq_n == 1'b0 && rd_n == 1'b0 && a == PRISMSPEEDCTRL) begin
+      oe = 1'b1;
+      if (ff_toggle_turbo == 1'b1)
+        dout = 8'b00000011;
+      else
+        dout = {4'b0000, cpu_speed_reg};
     end
+  end
+  
+  always @(posedge clk) begin    
+    kbd_change_video_edge_detect <= kbd_change_video_output;
+    if (turbo_boost_allowed == 1'b1) begin
+      kbd_turbo_boost_edge_detect <= kbd_turbo_boost;
+      if (kbd_turbo_boost_edge_detect == 1'b0 && kbd_turbo_boost == 1'b1)
+        ff_toggle_turbo <= 1'b1;
+      else if (kbd_turbo_boost_edge_detect == 1'b1 && kbd_turbo_boost == 1'b0)
+        ff_toggle_turbo <= 1'b0;
+    end
+      
+    if (zxuno_addr == SCANDBLCTRL && zxuno_regwr == 1'b1) begin
+      scandblctrl <= din;
+      cpu_speed_reg <= {4'b00, din[7:6]};
+    end
+    else if (iorq_n == 1'b0 && wr_n == 1'b0 && a == PRISMSPEEDCTRL && din[7:4] == 4'b0000) begin
+      scandblctrl <= {din[1:0], scandblctrl[5:0]};
+      cpu_speed_reg <= din[3:0];
+    end
+    else if (kbd_change_video_edge_detect == 1'b0 && kbd_change_video_output == 1'b1)
+      scandblctrl <= {scandblctrl[7:5], ((scandblctrl[0] == 1'b0)? 3'b111 : 3'b000), scandblctrl[1], ~scandblctrl[0]};
+  end
 endmodule

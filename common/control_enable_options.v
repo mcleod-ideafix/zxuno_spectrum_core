@@ -31,7 +31,7 @@ module control_enable_options(
     input wire zxuno_regwr,
     input wire [7:0] din,
     output reg [7:0] dout,
-    output reg oe_n,
+    output reg oe,
     output wire disable_ay,
     output wire disable_turboay,
     output wire disable_7ffd,
@@ -77,15 +77,15 @@ module control_enable_options(
     end
     
     always @* begin
-        oe_n = 1'b1;
+        oe = 1'b0;
         dout = 8'hFF;
         if (zxuno_regrd == 1'b1)            
             if (zxuno_addr == DEVOPTIONS) begin
-                oe_n = 1'b0;
+                oe = 1'b1;
                 dout = devoptions;
             end
             else if (zxuno_addr == DEVOPTS2) begin
-                oe_n = 1'b0;
+                oe = 1'b1;
                 dout = devopts2;
             end
         end
