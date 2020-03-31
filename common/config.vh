@@ -21,7 +21,7 @@
 //    Any distributed copy of this file must keep this notice intact.
 
 // ZXUNO core ID string. Must be padded with zero bytes to the right (16 bytes total)
-  localparam COREID_STRING = "EXP27-120320\000\000\000\000";
+  localparam COREID_STRING = "EXP27-300320\000\000\000\000";
 
 // ZXUNO address/data I/O ports for indirect access to ZXUNO registers
   localparam
