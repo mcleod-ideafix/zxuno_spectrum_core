@@ -91,7 +91,7 @@ module tld_zxuno_v4 (
    wire vga_enable, scanlines_enable;
    wire clk14en_tovga;
 
-   zxuno #(.FPGA_MODEL(3'b001), .MASTERCLK(42000000)) la_maquina (
+   zxuno #(.FPGA_MODEL(3'b001), .MASTERCLK(28000000)) la_maquina (
     .sysclk(sysclk),
     .power_on_reset_n(1'b1),  // sólo para simulación. Para implementacion, dejar a 1
     .r(ri),
