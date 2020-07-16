@@ -97,7 +97,7 @@ module flash_and_sd (
    // Instanciación del modulo SPI   
    spi mi_spi (
       .clk(clk),
-      .clken(1'b1),
+      //.clken(1'b1),
       .enviar_dato(enviar_dato),
       .recibir_dato(recibir_dato),
       .din(din),
@@ -105,9 +105,25 @@ module flash_and_sd (
       .oe(oe),
       .spi_transfer_in_progress(spi_transfer_in_progress),
    
-      .sclk(sclk),
-      .mosi(mosi),
-      .miso(miso)
+      .spi_clk(sclk),
+      .spi_di(mosi),
+      .spi_do(miso)
       );
+
+//   spi mi_spi (
+//      .clk(clk),
+//      .clken(1'b1),
+//      .enviar_dato(enviar_dato),
+//      .recibir_dato(recibir_dato),
+//      .din(din),
+//      .dout(dout),
+//      .oe(oe),
+//      .spi_transfer_in_progress(spi_transfer_in_progress),
+//   
+//      .sclk(sclk),
+//      .mosi(mosi),
+//      .miso(miso)
+//      );
+
     
 endmodule

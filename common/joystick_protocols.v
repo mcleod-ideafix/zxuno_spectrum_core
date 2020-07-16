@@ -23,7 +23,7 @@
 //
 //    Any distributed copy of this file must keep this notice intact.
 
-module joystick_protocols(
+module joystick_protocols (
     input wire clk,
     //-- cpu interface
     input wire [15:0] a,
@@ -38,7 +38,8 @@ module joystick_protocols(
     input wire zxuno_regwr,
     //-- actual joystick and keyboard signals
     input wire [4:0] kbdjoy_in,
-    input wire [5:0] db9joy_in,
+    input wire [5:0] db9joy1_in,
+    input wire [5:0] db9joy2_in,
     input wire [4:0] kbdcol_in,
     output reg [4:0] kbdcol_out,
     input wire vertical_retrace_int_n // this is used as base clock for autofire
@@ -64,20 +65,21 @@ module joystick_protocols(
       KMAPSPACEM	    = 15;	  
 
     // Input format: FUDLR . 0=pressed, 1=released
-    reg db9joyup = 1'b0;
-    reg db9joydown = 1'b0;
-    reg db9joyleft = 1'b0;
-    reg db9joyright = 1'b0;
-    reg db9joyfire = 1'b0;
-    reg db9joybtn2 = 1'b0;
-    reg kbdjoyup = 1'b0;
-    reg kbdjoydown = 1'b0;
-    reg kbdjoyleft = 1'b0;
-    reg kbdjoyright = 1'b0;
-    reg kbdjoyfire = 1'b0;
-    always @(posedge clk) begin
-        {db9joybtn2,db9joyfire,db9joyup,db9joydown,db9joyleft,db9joyright} <= ~db9joy_in;
-        {kbdjoyfire,kbdjoyup,kbdjoydown,kbdjoyleft,kbdjoyright} <= kbdjoy_in;
+    reg db9joyup;
+    reg db9joydown;
+    reg db9joyleft;
+    reg db9joyright;
+    reg db9joyfire1;
+    reg db9joyfire2;
+    reg kbdjoyup;
+    reg kbdjoydown;
+    reg kbdjoyleft;
+    reg kbdjoyright;
+    reg kbdjoyfire1;
+    reg kbdjoyfire2;
+    always @* begin
+        {db9joyfire2,db9joyfire1,db9joyup,db9joydown,db9joyleft,db9joyright} <= ~db9joy1_in;
+        {kbdjoyfire2,kbdjoyfire1,kbdjoyup,kbdjoydown,kbdjoyleft,kbdjoyright} <= {1'b0, kbdjoy_in} | ~db9joy2_in;
     end
     
     // Update JOYCONF from CPU
@@ -89,42 +91,49 @@ module joystick_protocols(
     
     // Autofire stuff
     reg [2:0] cont_autofire = 3'b000;
-    reg [3:0] edge_detect = 4'b0000;
+    reg edge_detect = 1'b0;
     wire autofire = cont_autofire[2];
     always @(posedge clk) begin
-        edge_detect <= {edge_detect[2:0], vertical_retrace_int_n};
-        if (edge_detect == 4'b0011)
-            cont_autofire <= cont_autofire + 1;  // count only on raising edge of vertical retrace int
+      edge_detect <= vertical_retrace_int_n;
+      if ({edge_detect,vertical_retrace_int_n} == 2'b01)
+          cont_autofire <= cont_autofire + 3'd1;  // count only on raising edge of vertical retrace int
     end    
-    wire kbdjoyfire_processed = (joyconf[3]==1'b0)? kbdjoyfire : kbdjoyfire & autofire;
-    wire db9joyfire_processed = (joyconf[7]==1'b0)? db9joyfire : db9joyfire & autofire;
+    wire kbdjoyfire_processed = (joyconf[3]==1'b0)? kbdjoyfire1 : kbdjoyfire1 & autofire;
+    wire db9joyfire_processed = (joyconf[7]==1'b0)? db9joyfire1 : db9joyfire1 & autofire;
     
     always @* begin
-        oe = 1'b0;
-        dout = 8'hFF;
-        kbdcol_out = kbdcol_in;
-        if (zxuno_addr==JOYCONFADDR && zxuno_regrd==1'b1) begin
-            oe = 1'b1;
-            dout = joyconf;
+      oe = 1'b0;
+      dout = 8'hFF;
+      kbdcol_out = kbdcol_in;
+      if (zxuno_addr==JOYCONFADDR && zxuno_regrd==1'b1) begin  // lectura específica de I/O de ZXUNO
+        oe = 1'b1;
+        dout = joyconf;
+      end
+      else if (iorq_n == 1'b0 && rd_n == 1'b0) begin  // lectura genérica de I/O
+        if (a[7:0] == KEMPSTONADDR) begin
+          dout = 8'h00;
+          if (joyconf[2:0] == KEMPSTON) begin
+              dout = dout | {2'b00, kbdjoyfire2, kbdjoyfire_processed, kbdjoyup, kbdjoydown, kbdjoyleft, kbdjoyright};
+              oe = 1'b1;
+          end
+          if (joyconf[6:4] == KEMPSTON) begin
+              dout = dout | {2'b00, db9joyfire2, db9joyfire_processed, db9joyup, db9joydown, db9joyleft, db9joyright};
+              oe = 1'b1;
+          end
         end
-        else if (iorq_n == 1'b0 && a[7:0]==KEMPSTONADDR && rd_n==1'b0) begin
-            dout = 8'h00;
-            oe = 1'b1;
-            if (joyconf[2:0]==KEMPSTON)
-                dout = dout | {3'b000, kbdjoyfire_processed, kbdjoyup, kbdjoydown, kbdjoyleft, kbdjoyright};
-            if (joyconf[6:4]==KEMPSTON)
-                dout = dout | {2'b00, db9joybtn2, db9joyfire_processed, db9joyup, db9joydown, db9joyleft, db9joyright};
+        else if (a[7:0] == FULLERADDR) begin
+          dout = 8'hFF;
+          if (joyconf[2:0] == FULLER) begin
+              dout = dout & {~kbdjoyfire_processed, ~kbdjoyfire2, 2'b11, ~kbdjoyright, ~kbdjoyleft, ~kbdjoydown, ~kbdjoyup};
+              oe = 1'b1;
+          end
+          if (joyconf[6:4] == FULLER) begin
+              dout = dout & {~db9joyfire_processed, ~db9joyfire2, 2'b11, ~db9joyright, ~db9joyleft, ~db9joydown, ~db9joyup};
+              oe = 1'b1;
+          end
         end
-        else if (iorq_n == 1'b0 && a[7:0]==FULLERADDR && rd_n==1'b0) begin
-            dout = 8'hFF;
-            oe = 1'b1;
-            if (joyconf[2:0]==FULLER)
-                dout = dout & {~kbdjoyfire_processed, 3'b111, ~kbdjoyright, ~kbdjoyleft, ~kbdjoydown, ~kbdjoyup};
-            if (joyconf[6:4]==FULLER)
-                dout = dout & {~db9joyfire_processed, ~db9joybtn2, 2'b11, ~db9joyright, ~db9joyleft, ~db9joydown, ~db9joyup};
-        end
-//        else 
-		  if (iorq_n==1'b0 && a[SINCLAIRP1ADDR]==1'b0 && a[0]==1'b0 && rd_n==1'b0) begin
+        else if (a[0] == 1'b0) begin  // lectura de I/O de teclado
+          if (a[SINCLAIRP1ADDR]==1'b0) begin
             if (joyconf[2:0]==SINCLAIRP1)
                 kbdcol_out = kbdcol_out & {~kbdjoyleft,~kbdjoyright,~kbdjoydown,~kbdjoyup,~kbdjoyfire_processed};
             if (joyconf[6:4]==SINCLAIRP1)
@@ -132,10 +141,9 @@ module joystick_protocols(
             if (joyconf[2:0]==CURSOR)
                 kbdcol_out = kbdcol_out & {~kbdjoydown,~kbdjoyup,~kbdjoyright,1'b1,~kbdjoyfire_processed};
             if (joyconf[6:4]==CURSOR)
-                kbdcol_out = kbdcol_out & {~db9joydown,~db9joyup,~db9joyright,~db9joybtn2,~db9joyfire_processed};
-        end
-//        else 
-		  if (iorq_n==1'b0 && a[SINCLAIRP2ADDR]==1'b0 && a[0]==1'b0 && rd_n==1'b0) begin
+                kbdcol_out = kbdcol_out & {~db9joydown,~db9joyup,~db9joyright,~db9joyfire2,~db9joyfire_processed};
+          end
+          if (a[SINCLAIRP2ADDR]==1'b0) begin
             if (joyconf[2:0]==SINCLAIRP2)
                 kbdcol_out = kbdcol_out & {~kbdjoyfire_processed,~kbdjoyup,~kbdjoydown,~kbdjoyright,~kbdjoyleft};
             if (joyconf[6:4]==SINCLAIRP2)
@@ -144,32 +152,34 @@ module joystick_protocols(
                 kbdcol_out = kbdcol_out & {~kbdjoyleft,4'b1111};
             if (joyconf[6:4]==CURSOR)
                 kbdcol_out = kbdcol_out & {~db9joyleft,4'b1111};
-        end
-		  //Sinclair extendido,Z-X
-		  if (iorq_n==1'b0 && a[SINCLAIRADDRE]==1'b0 && a[0]==1'b0 && rd_n==1'b0) begin
-				if (joyconf[6:4]==SINCLAIRP1)
-                kbdcol_out = kbdcol_out & {2'b11, ~db9joybtn2, 2'b11};               
-				if (joyconf[6:4]==SINCLAIRP2)
-					 kbdcol_out = kbdcol_out & {3'b111, ~db9joybtn2, 1'b1};
-		  end
-		  //
-		  //Protocolo OPQASPACEM
-		  if (iorq_n==1'b0 && a[KMAPOP]==1'b0 && a[0]==1'b0 && rd_n==1'b0) begin
-				if (joyconf[6:4]==KMAPOPQA)    
-					 kbdcol_out = kbdcol_out & {3'b111,  ~db9joyleft, ~db9joyright};
-		  end	
-		  if (iorq_n==1'b0 && a[KMAPQ]==1'b0 && a[0]==1'b0 && rd_n==1'b0) begin
-				if (joyconf[6:4]==KMAPOPQA)    
-					 kbdcol_out = kbdcol_out & {4'b1111, ~db9joyup};
-		  end	  	
-		  if (iorq_n==1'b0 && a[KMAPA]==1'b0 && a[0]==1'b0 && rd_n==1'b0) begin
-				if (joyconf[6:4]==KMAPOPQA)    
-					 kbdcol_out = kbdcol_out & {4'b1111,  ~db9joydown};
-		  end	 
-		  if (iorq_n==1'b0 && a[KMAPSPACEM]==1'b0 && a[0]==1'b0 && rd_n==1'b0) begin
-				if (joyconf[6:4]==KMAPOPQA)    
-					 kbdcol_out = kbdcol_out & {2'b11, ~db9joybtn2,  1'b1, ~db9joyfire};
-		  end	  
-		  //
+          end
+          //Sinclair extendido,Z-X
+          if (a[SINCLAIRADDRE]==1'b0) begin
+            if (joyconf[6:4]==SINCLAIRP1)
+                    kbdcol_out = kbdcol_out & {2'b11, ~db9joyfire2, 2'b11};               
+            if (joyconf[6:4]==SINCLAIRP2)
+               kbdcol_out = kbdcol_out & {3'b111, ~db9joyfire2, 1'b1};
+          end
+          //
+          //Protocolo OPQASPACEM
+          if (a[KMAPOP]==1'b0) begin
+            if (joyconf[6:4]==KMAPOPQA)    
+               kbdcol_out = kbdcol_out & {3'b111,  ~db9joyleft, ~db9joyright};
+          end	
+          if (a[KMAPQ]==1'b0) begin
+            if (joyconf[6:4]==KMAPOPQA)    
+               kbdcol_out = kbdcol_out & {4'b1111, ~db9joyup};
+          end	  	
+          if (a[KMAPA]==1'b0) begin
+            if (joyconf[6:4]==KMAPOPQA)    
+               kbdcol_out = kbdcol_out & {4'b1111,  ~db9joydown};
+          end	 
+          if (a[KMAPSPACEM]==1'b0) begin
+            if (joyconf[6:4]==KMAPOPQA)    
+               kbdcol_out = kbdcol_out & {2'b11, ~db9joyfire2,  1'b1, ~db9joyfire_processed};
+          end	  
+          //
+        end  // fin de lectura de I/O de teclado
+      end    // fin lectura genérica de I/O
     end
 endmodule

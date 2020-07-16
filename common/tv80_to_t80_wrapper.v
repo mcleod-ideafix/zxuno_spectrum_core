@@ -69,14 +69,15 @@ module tv80n_wrapper (
 		.HALT_n(halt_n),
 		.BUSAK_n(busak_n),
 		.A(A),
-		.D(d)
+		.DIN(di),
+    .DOUT(dout)
 	);
 	
-	assign dout = d; 
-	assign d = ( (!mreq_n || !iorq_n) && !rd_n)? di : 
-               ( (!mreq_n || !iorq_n) && !wr_n)? 8'hZZ :
-               (busak_n == 1'b0)? 8'hZZ :
-               8'hFF;
+//	assign dout = d; 
+//	assign d = ( (!mreq_n || !iorq_n) && !rd_n)? di : 
+//               ( (!mreq_n || !iorq_n) && !wr_n)? 8'hZZ :
+//               (busak_n == 1'b0)? 8'hZZ :
+//               8'hFF;
 
 endmodule
 

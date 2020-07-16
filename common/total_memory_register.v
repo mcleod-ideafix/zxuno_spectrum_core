@@ -41,7 +41,7 @@ module board_capabilities (
     
     assign oe = (zxuno_addr == MEMREPORT && zxuno_regrd == 1'b1);
     reg [1:0] memreport = 2'b00;  // initial value
-    assign dout = {4'b0000, fpga_model, memreport};
+    assign dout = {3'b000, fpga_model, memreport};
     
     assign current_value = memreport[1:0];
 

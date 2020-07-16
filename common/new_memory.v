@@ -250,6 +250,7 @@ module new_memory (
    reg [20:0] addr_port2;
    reg oe_memory_n;
    reg oe_bootrom_n;
+   reg write_bus_cycle;
    reg we2_n;
    reg ram_busy;
    assign enable_pzx = ~ram_busy;
@@ -266,6 +267,7 @@ module new_memory (
    // y señales de acceso de lectura y escritura
 
    always @* begin
+      write_bus_cycle = (mreq_n == 1'b0 && rfsh_n == 1'b1 && m1_n == 1'b1 && rd_n == 1'b1);
       oe_memory_n = mreq_n | rd_n;
       we2_n = mreq_n | wr_n;
       oe_bootrom_n = 1'b1;
@@ -422,8 +424,8 @@ module new_memory (
       end // de a[15:14] == 2'b11
       
       else begin  // realmente a esta parte nunca se habría de llegar, pero para completar la cadena de if-else if...
-         oe_memory_n = 1'b1;
-         oe_bootrom_n = 1'b1;
+        oe_memory_n = 1'b1;
+        oe_bootrom_n = 1'b1;
       end
    end
 
@@ -450,6 +452,7 @@ module new_memory (
 
    sram_and_mirror toda_la_ram (  // Nuevo controlador de SRAM usando BRAM de doble puerto para evitar la contienda
       .clk(mclk),
+      .write_bus_cycle(write_bus_cycle),
       .a1({vrampage,vramaddr}),
       .a2(addr_port2),
       .we2_n(we2_n),
@@ -510,6 +513,7 @@ endmodule
 
 module sram_and_mirror (
     input wire clk,          // 28MHz
+    input wire write_bus_cycle,  // To indicate if this is a write cycle, so exposing din2 as much as possible
     input wire [14:0] a1,    // to BRAM addr bus
     input wire [20:0] a2,    // to SRAM addr bus
     input wire we2_n,        // to SRAM WE enable
@@ -550,14 +554,14 @@ module sram_and_mirror (
 //    assign a = a2;
 //    assign we_n = we2_n;
 //    assign dout2 = d;
-//    assign d = (we2_n == 1'b0)? din2 : 8'hZZ;
+//    assign d = (write_bus_cycle == 1'b1)? din2 : 8'hZZ;
 
     // con lector de PZX
     assign a =    (enable_pzx)? pzx_addr : a2;
     assign we_n = (enable_pzx)? ~write_data_pzx : we2_n;
     assign dout2 = d;
     assign data_to_pzx = d;
-    assign d = (we2_n == 1'b0 && write_data_pzx == 1'b0)? din2 : 
+    assign d = (write_bus_cycle == 1'b1 && write_data_pzx == 1'b0)? din2 : 
                (write_data_pzx == 1'b1)? data_from_pzx :
                8'hZZ;
 endmodule

@@ -129,13 +129,20 @@ module tld_zxuno_v4 (
     .sd_mosi(sd_mosi),
     .sd_miso(sd_miso),
     
-    .joyup(joyup),
-    .joydown(joydown),
-    .joyleft(joyleft),
-    .joyright(joyright),
-    .joyfire(joyfire),
-    .joybtn2(joybtn2),    
+    .joy1up(joyup),
+    .joy1down(joydown),
+    .joy1left(joyleft),
+    .joy1right(joyright),
+    .joy1fire1(joyfire),
+    .joy1fire2(joybtn2),    
 	 
+    .joy2up(1'b1),
+    .joy2down(1'b1),
+    .joy2left(1'b1),
+    .joy2right(1'b1),
+    .joy2fire1(1'b1),
+    .joy2fire2(1'b1),    
+
     .mouseclk(mouseclk),
     .mousedata(mousedata),
     
