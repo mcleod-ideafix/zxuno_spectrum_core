@@ -18,8 +18,8 @@ TIMESPEC TS_clk50 = PERIOD "clk50mhz" 20ns HIGH 50%;
 
 # Clocks & debug
 NET "clk50mhz"        LOC="A10" | IOSTANDARD = LVCMOS33;
-NET "testled"           LOC="T9"  | IOSTANDARD = LVCMOS33;
-#NET LED<1>            LOC="R9"  | IOSTANDARD = LVCMOS33;
+NET "flashled"        LOC="T9"  | IOSTANDARD = LVCMOS33;
+NET "sdled"           LOC="R9"  | IOSTANDARD = LVCMOS33;
 #NET BTN<0>            LOC="T8"  | IOSTANDARD = LVCMOS33;
 #NET BTN<1>            LOC="R7"  | IOSTANDARD = LVCMOS33;
 
@@ -60,7 +60,7 @@ NET "mouseclk"        LOC="M10"  | IOSTANDARD = LVCMOS33 | PULLUP;
 NET "mousedata"       LOC="P11"  | IOSTANDARD = LVCMOS33 | PULLUP;
 
 # SRAM
-NET "sram_*"      DRIVE = 24 | SLEW = FAST | IOSTANDARD = LVTTL;
+NET "sram_*"      SLEW = SLOW | IOSTANDARD = LVTTL;
 NET "sram_addr<0>"    LOC="H14";
 NET "sram_addr<1>"    LOC="J16";
 NET "sram_addr<2>"    LOC="J11";
@@ -82,18 +82,27 @@ NET "sram_addr<17>"   LOC="R14";
 NET "sram_addr<18>"   LOC="R16";
 NET "sram_addr<19>"   LOC="F10";
 NET "sram_addr<20>"   LOC="A12";
-NET "sram_data<0>"    LOC="K15";
-NET "sram_data<1>"    LOC="N16";
-NET "sram_data<2>"    LOC="L16";
-NET "sram_data<3>"    LOC="K12";
-NET "sram_data<4>"    LOC="J14";
-NET "sram_data<5>"    LOC="P15";
-NET "sram_data<6>"    LOC="P16";
-NET "sram_data<7>"    LOC="R15";
+#NET "sram_data<0>"    LOC="K15";
+#NET "sram_data<1>"    LOC="N16";
+#NET "sram_data<2>"    LOC="L16";
+#NET "sram_data<3>"    LOC="K12";
+#NET "sram_data<4>"    LOC="J14";
+#NET "sram_data<5>"    LOC="P15";
+#NET "sram_data<6>"    LOC="P16";
+#NET "sram_data<7>"    LOC="R15";
+NET "sram_data<0>"    LOC="T5";
+NET "sram_data<1>"    LOC="T4";
+NET "sram_data<2>"    LOC="P9";
+NET "sram_data<3>"    LOC="D6";
+NET "sram_data<4>"    LOC="F7";
+NET "sram_data<5>"    LOC="N6";
+NET "sram_data<6>"    LOC="N8";
+NET "sram_data<7>"    LOC="R5";
+
 NET "sram_we_n"       LOC="M16";
 NET "sram_ub"         LOC="E13";
 
-# SPI Flash
+## SPI Flash
 NET "flash_cs_n"      LOC="T3"  | IOSTANDARD = LVCMOS33;
 NET "flash_clk"       LOC="R11" | IOSTANDARD = LVCMOS33;
 NET "flash_mosi"      LOC="T10" | IOSTANDARD = LVCMOS33;
@@ -109,6 +118,10 @@ NET "sd_miso"         LOC="T7"   | IOSTANDARD = LVCMOS33 | PULLUP;
 NET "joy_data"        LOC="T13"  | IOSTANDARD = LVTTL;
 NET "joy_load_n"      LOC="T12"  | IOSTANDARD = LVTTL;
 NET "joy_clk"         LOC="R12"  | IOSTANDARD = LVTTL;
+
+NET "uart_tx"         LOC="A6"  | IOSTANDARD = LVCMOS33 | DRIVE = 4;  # RX en el módulo
+NET "uart_rx"         LOC="A11" | IOSTANDARD = LVCMOS33 | PULLUP;  # TX en el módulo
+NET "uart_rts"        LOC="D8"  | IOSTANDARD = LVCMOS33 | DRIVE = 2;  # CTS en el módulo
 
 ## SDRAM
 #NET "sdram_addr<0>"   LOC="L4"  | IOSTANDARD = LVCMOS33;

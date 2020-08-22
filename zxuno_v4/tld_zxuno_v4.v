@@ -75,7 +75,10 @@ module tld_zxuno_v4 (
    input wire joybtn2
    );
 
-   wire sysclk;
+`include "../common/config.vh"
+
+   wire sysclk, mcolorclk;
+   wire disable_genclk;
    wire [2:0] pll_frequency_option;
    
    clock_generator relojes_maestros
@@ -83,13 +86,15 @@ module tld_zxuno_v4 (
     .CLK_IN1            (clk50mhz),
     .pll_option         (pll_frequency_option),
     // Clock out ports
-    .sysclk             (sysclk)
+    .sysclk             (sysclk),
+    .mcolorclk          (mcolorclk)
     );
 
    wire [2:0] ri, gi, bi;
    wire hsync_pal, vsync_pal, csync_pal;
    wire vga_enable, scanlines_enable;
    wire clk14en_tovga;
+   wire clkcolor4x, ad724_enable_gencolorclk;
 
    zxuno #(.FPGA_MODEL(3'b001), .MASTERCLK(28000000)) la_maquina (
     .sysclk(sysclk),
@@ -150,13 +155,26 @@ module tld_zxuno_v4 (
     .vga_enable(vga_enable),
     .scanlines_enable(scanlines_enable),
     .freq_option(pll_frequency_option),
-    
+        
     .ad724_xtal(stdnb),
-    .ad724_mode(stdn)
+    .ad724_mode(stdn),
+    .ad724_enable_gencolorclk(ad724_enable_gencolorclk)
     );
+
+`ifdef FPGA_GENERATES_COLOR_CLOCK_OPTION
+  gencolorclk generador_reloj_color (
+    .clk(mcolorclk),
+    .mode(stdn),
+    .altern(pll_frequency_option[0]),
+    .clkcolor4x(clkcolor4x)
+  );
+`else
+  assign clkcolor4x = 1'b1;   // VSYNC a 1 si no se genera el reloj de color
+`endif
 
 	vga_scandoubler #(.CLKVIDEO(14000)) salida_vga (
 		.clk(sysclk),
+    .clkcolor4x(clkcolor4x | ~ad724_enable_gencolorclk),
     .clk14en(clk14en_tovga),
     .enable_scandoubling(vga_enable),
     .disable_scaneffect(~scanlines_enable),

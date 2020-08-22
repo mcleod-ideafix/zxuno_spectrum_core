@@ -84,7 +84,7 @@ module pll_drp
       parameter S1_CLKOUT0_PHASE          = 0,
       parameter S1_CLKOUT0_DUTY           = 50000,
 
-      parameter S1_CLKOUT1_DIVIDE         = 5,
+      parameter S1_CLKOUT1_DIVIDE         = 100,
       parameter S1_CLKOUT1_PHASE          = 0,
       parameter S1_CLKOUT1_DUTY           = 50000,
 
@@ -146,7 +146,7 @@ module pll_drp
       parameter S2_CLKOUT0_PHASE          = 0,
       parameter S2_CLKOUT0_DUTY           = 50000,
       
-      parameter S2_CLKOUT1_DIVIDE         = 5,
+      parameter S2_CLKOUT1_DIVIDE         = 116,
       parameter S2_CLKOUT1_PHASE          = 0,
       parameter S2_CLKOUT1_DUTY           = 50000,
       
@@ -564,7 +564,7 @@ module pll_drp
    localparam  TCQ = 100;
 
    // Make sure the memory is implemented as distributed (does not work on 11.2)
-   (* rom_style = "distributed" *)
+   //(* rom_style = "distributed" *)
    reg [36:0]  rom [0:183];
    reg [7:0]   rom_addr;
    reg [36:0]  rom_do;

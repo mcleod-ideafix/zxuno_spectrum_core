@@ -161,7 +161,7 @@ module pll_top
       .CLKOUT0_DUTY_CYCLE(0.5),
       .CLKOUT0_PHASE(0.0), 
       
-      .CLKOUT1_DIVIDE(5), 
+      .CLKOUT1_DIVIDE(100), 
       .CLKOUT1_DUTY_CYCLE(0.5),
       .CLKOUT1_PHASE(0.0), 
       

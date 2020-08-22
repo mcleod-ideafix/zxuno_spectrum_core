@@ -20,11 +20,15 @@
 #
 #    Any distributed copy of this file must keep this notice intact.
 
+#INST "clk50mhz_IBUF_BUFG" LOC = BUFGMUX_X3Y15;
+#INST "relojes_maestros/reconfiguracion_pll/PLL_ADV_inst" LOC = PLL_ADV_X0Y1;
+
 # Timing constraints
 NET "clk50mhz" TNM_NET = "clk50mhz";
-#NET "sysclk" TNM_NET = "sysclk";
-
+#NET "clk50mhz" CLOCK_DEDICATED_ROUTE = FALSE;
 TIMESPEC TS_clk50 = PERIOD "clk50mhz" 20ns HIGH 50%;
+
+#NET "sysclk" TNM_NET = "sysclk";
 #TIMESPEC TS_clk28 = PERIOD "sysclk" 29ns HIGH 50%;  #pongo en realidad la frecuencia más alta que tendrá este enable
 
 #NET "la_maquina/clk14en" TNM_NET = FFS "mc_clk14";
