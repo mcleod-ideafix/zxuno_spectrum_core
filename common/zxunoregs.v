@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ns / 1ns
 `default_nettype none
 
 //    This file is part of the ZXUNO Spectrum core. 
@@ -63,14 +63,11 @@ module zxunoregs (
    end
     
    always @* begin
-      if (!iorq_n && a==IOADDR && !rd_n) begin
-         dout = raddr;
+      dout = raddr;
+      if (iorq_n == 1'b0 && a==IOADDR && rd_n == 1'b0)
          oe = 1'b1;
-      end
-      else begin
-         dout = 8'hZZ;
+      else
          oe = 1'b0;
-      end
    end
    
    assign read_from_reg = (a==IODATA && iorq_n == 1'b0 && rd_n == 1'b0);

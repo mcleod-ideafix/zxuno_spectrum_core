@@ -49,13 +49,18 @@ module scandoubler_ctrl (
     
   reg [3:0] cpu_speed_reg = 4'b0000;
   
-  reg [7:0] scandblctrl = 8'h00;  // initial value
+  reg [7:0] scandblctrl = INITIAL_VIDEO_VALUE;
   reg kbd_change_video_edge_detect = 1'b0;
   reg kbd_turbo_boost_edge_detect = 1'b0;
   reg ff_toggle_turbo = 1'b0;
 
+`ifdef VGA_OUTPUT_OPTION
   assign vga_enable = scandblctrl[0];
   assign scanlines_enable = scandblctrl[1];
+`else
+  assign vga_enable = 1'b0;
+  assign scanlines_enable = 1'b0;
+`endif  
   assign freq_option = scandblctrl[4:2];
   assign csync_option = scandblctrl[5];
   

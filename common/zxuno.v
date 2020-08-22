@@ -96,8 +96,11 @@ module zxuno (
   
   // AD724
   output wire ad724_xtal,
-  output wire ad724_mode
+  output wire ad724_mode,
+  output wire ad724_enable_gencolorclk
   );
+
+`include "config.vh"
 
   parameter FPGA_MODEL = 3'b000;
   parameter MASTERCLK  = 28000000;
@@ -176,11 +179,11 @@ module zxuno (
   wire f3_pressed        = user_fnt[7];
   wire f4_pressed        = user_fnt[6];
   wire f6_pressed        = user_fnt[5];
-  wire f7_pressed        = user_fnt[4];
-  wire f8_pressed        = user_fnt[3];
-  wire f9_pressed        = user_fnt[2];
+  wire f7_pressed        = user_fnt[4];   // PLAY del PZX
+  wire f8_pressed        = user_fnt[3];   // REWIND al principio del PZX, o a la última posición marcada en el fichero
+  wire f9_pressed        = user_fnt[2];   // STOP del PZX
   wire f11_pressed       = user_fnt[1];
-  wire f12_pressed       = user_fnt[0];   
+  wire f12_pressed       = user_fnt[0];   // Turbo-boost (28 MHz) 
   
   // Interfaz joystick configurable
   wire oe_joystick;
@@ -491,7 +494,6 @@ module zxuno (
   new_memory bootrom_rom_y_ram (
   // Relojes y reset
     .clk(sysclk),   // Reloj para registros de configuración
-    .mclk(sysclk),        // Reloj para el modulo de memoria de doble puerto
     .mrst_n(mrst_n & power_on_reset_n),
     .rst_n(rst_n & power_on_reset_n),
   
@@ -609,18 +611,20 @@ module zxuno (
     .oe(oe_coreid)
   );
 
-  // DESHABILITADO!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//    scratch_register scratch (
-//        .clk(sysclk),
-//        .poweron_rst_n(power_on_reset_n),
-//        .zxuno_addr(zxuno_addr),
-//        .zxuno_regrd(zxuno_regrd),
-//        .zxuno_regwr(zxuno_regwr),
-//        .din(cpudout),
-//        .dout(scratch_dout),
-//        .oe(oe_scratch)
-//    );
+`ifdef SCRATCH_REGISTER_OPTION
+    scratch_register scratch (
+        .clk(sysclk),
+        .poweron_rst_n(power_on_reset_n),
+        .zxuno_addr(zxuno_addr),
+        .zxuno_regrd(zxuno_regrd),
+        .zxuno_regwr(zxuno_regwr),
+        .din(cpudout),
+        .dout(scratch_dout),
+        .oe(oe_scratch)
+    );
+`endif
 
+`ifdef AD724_CONTROL_SUPPORT
   control_ad724 ad724 (
     .clk(sysclk),
     .poweron_rst_n(power_on_reset_n),
@@ -631,8 +635,14 @@ module zxuno (
     .dout(ad724_dout),
     .oe(oe_ad724),
     .ad724_xtal(ad724_xtal),
-    .ad724_mode(ad724_mode)
+    .ad724_mode(ad724_mode),
+    .ad724_enable_gencolorclk(ad724_enable_gencolorclk)
   );
+`else
+  assign ad724_xtal = 1'b1;
+  assign ad724_mode = 1'b0;
+  assign ad724_enable_gencolorclk = 1'b0;
+`endif
 
   control_enable_options device_enables (
     .clk(sysclk),
@@ -680,6 +690,7 @@ module zxuno (
     .csync_option(csync_option)
   );
 
+`ifdef RASTER_INTERRUPT_SUPPORT
   rasterint_ctrl control_rasterint (
     .clk(sysclk),
     .rst_n(rst_n & mrst_n & power_on_reset_n),
@@ -694,6 +705,7 @@ module zxuno (
     .raster_line(raster_line),
     .raster_int_in_progress(raster_int_in_progress)
   );
+`endif  
 
   // DESHABILITADO!!!!!!!!!!!!!!!!!!!!!!!!!
 //    nmievents nmi_especial_de_antonio (
@@ -737,6 +749,7 @@ module zxuno (
     .oe_mousestatus(oe_mousestatus)
   );
 
+`ifdef MULTIBOOT_SUPPORT
   multiboot el_multiboot (
     .clk(sysclk),
   //.clk_icap(clk14),
@@ -749,7 +762,9 @@ module zxuno (
     .dout(multiboot_dout),
     .oe(oe_multiboot)
   );
+`endif
 
+`ifdef SPECDRUM_COVOX_SUPPORT
   specdrum the_specdrum (
     .clk(sysclk),
     .rst_n(rst_n & mrst_n & power_on_reset_n),
@@ -759,6 +774,7 @@ module zxuno (
     .d(cpudout),
     .specdrum_out(specdrum)
   );
+`endif
   
   disk_drive el_disco (
     .clk(sysclk),
@@ -772,6 +788,7 @@ module zxuno (
     .oe(oe_diskdrive)
   );
 
+`ifdef PZX_PLAYER_OPTION
   pzx_player cassette_digital (
     .clk(sysclk),
     .sram_access_allowed(enable_pzx),
@@ -799,6 +816,7 @@ module zxuno (
     .sramdin(data_to_pzx),
     .sramdout(data_from_pzx)
   );
+`endif
 
   board_capabilities capreg (
     .clk(sysclk),
@@ -879,6 +897,7 @@ module zxuno (
     .output_right(audio_out_right)
   );
 
+`ifdef MIDI_SYNTH_OPTION
   i2s_decoder i2s_midi (
     .clk(sysclk),
     .sck(clkbd),
@@ -886,8 +905,10 @@ module zxuno (
     .sd(dabd),
     .left_out(midi_left),
     .right_out(midi_right)
-  );
+  );  
+`endif
 
+`ifdef UART_ESP8266_OPTION
   // UART para el ESP8266
   zxunouart #(.CLK(MASTERCLK)) uart_esp8266 (
     .clk(sysclk),
@@ -901,6 +922,10 @@ module zxuno (
     .uart_rx(uart_rx),
     .uart_rts(uart_rts)
   );
+`else
+  assign uart_tx = 1'b0;
+  assign uart_rts = 1'b0;  
+`endif
   
   // Modulo de depuracion
 //  debug visor_valores_en_pantalla (

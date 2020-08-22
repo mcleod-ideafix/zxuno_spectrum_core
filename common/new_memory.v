@@ -26,7 +26,6 @@
 module new_memory (
    // Relojes y reset
    input wire clk,        // Reloj de la CPU
-   input wire mclk,       // Reloj para la BRAM
    input wire mrst_n,
    input wire rst_n,
    
@@ -92,7 +91,7 @@ module new_memory (
    reg divmmc_is_enabled = 1'b0;
    reg divmmc_nmi_is_disabled = 1'b0;
    reg issue2_keyboard = 1'b0;
-   initial timing_mode = 2'b00;
+   initial timing_mode = 2'b01;
    reg disable_cont = 1'b0;
    reg masterconf_frozen = 1'b0;
    reg [1:0] negedge_configrom = 2'b00;
@@ -117,10 +116,10 @@ module new_memory (
         initial_boot_mode <= 1'b0;
       end
       else if (addr==MASTERCONF && iow) begin
-         {timing_mode[1],disable_cont,timing_mode[0],issue2_keyboard} <= din[6:3];
+         {timing_mode[1],disable_cont,timing_mode[0],issue2_keyboard,divmmc_nmi_is_disabled,divmmc_is_enabled} <= din[6:1];
          if (!masterconf_frozen) begin
             masterconf_frozen <= din[7];
-            {divmmc_nmi_is_disabled,divmmc_is_enabled,initial_boot_mode} <= din[2:0];
+            initial_boot_mode <= din[0];
          end
       end
    end
@@ -135,7 +134,8 @@ module new_memory (
    
    // DIVMMC control register
    reg [7:0] divmmc_ctrl = 8'h00;
-   wire [3:0] divmmc_sram_page = divmmc_ctrl[3:0];
+   wire [5:0] divmmc_sram_page = divmmc_ctrl[5:0];
+   wire divmmc_sram_page_is_valid = (divmmc_sram_page[5:4] == 2'b00);  // solo admito 128K de SRAM para DivMMC
    wire mapram_mode = divmmc_ctrl[6];
    wire conmem = divmmc_ctrl[7];
    always @(posedge clk) begin
@@ -156,7 +156,7 @@ module new_memory (
    reg divmmc_status_after_m1 = 1'b0;
    assign enable_nmi_n = divmmc_is_enabled & divmmc_is_paged & ~divmmc_nmi_is_disabled;
    wire divmmc_rom_active = divmmc_is_enabled && (divmmc_is_paged || conmem);
-   
+
    always @(posedge clk) begin
       if (!mrst_n || !rst_n) begin
          divmmc_is_paged <= 1'b0;
@@ -166,7 +166,7 @@ module new_memory (
          if (!mreq_n && !rd_n && !m1_n && (a==16'h0000 || 
                                            a==16'h0008 && rom48k_selected ||
                                            a==16'h0038 && rom48k_selected ||
-                                           (a==16'h0066 && rom48k_selected && divmmc_nmi_is_disabled==1'b0 && page_configrom_active==1'b0) ||
+                                          (a==16'h0066 && rom48k_selected && divmmc_nmi_is_disabled==1'b0 && page_configrom_active==1'b0) ||
                                            a==16'h04C6 && rom48k_selected ||
                                            a==16'h0562 && rom48k_selected)) begin  // automapper diferido (siguiente ciclo)
            divmmc_status_after_m1 <= 1'b1;
@@ -184,19 +184,19 @@ module new_memory (
       end
    end
     
-`define ADDR_7FFD_PLUS2A (!a[1] && a[15:14]==2'b01 && (!enable_timexmmu || a[7:0]!=8'hF4))
-`define ADDR_7FFD_SP128 (!a[1] && !a[15] && (!enable_timexmmu || a[7:0]!=8'hF4))
-`define ADDR_1FFD (!a[1] && a[15:12]==4'b0001 && (!enable_timexmmu || a[7:0]!=8'hF4))
-`define ADDR_TIMEX_MMU (a[7:0] == 8'hF4)
+   wire ADDR_7FFD_PLUS2A = (!a[1] && a[15:14]==2'b01 && (!enable_timexmmu || a[7:0]!=8'hF4));
+   wire ADDR_7FFD_SP128  = (!a[1] && !a[15] && (!enable_timexmmu || a[7:0]!=8'hF4));
+   wire ADDR_1FFD        = (!a[1] && a[15:12]==4'b0001 && (!enable_timexmmu || a[7:0]!=8'hF4));
+   wire ADDR_TIMEX_MMU   = (a[7:0] == 8'hF4);
 
-`define PAGE0 3'b000
-`define PAGE1 3'b001
-`define PAGE2 3'b010
-`define PAGE3 3'b011
-`define PAGE4 3'b100
-`define PAGE5 3'b101
-`define PAGE6 3'b110
-`define PAGE7 3'b111
+   localparam PAGE0 = 3'b000,
+              PAGE1 = 3'b001,
+              PAGE2 = 3'b010,
+              PAGE3 = 3'b011,
+              PAGE4 = 3'b100,
+              PAGE5 = 3'b101,
+              PAGE6 = 3'b110,
+              PAGE7 = 3'b111;
 
    // Standard 128K memory manager and Timex MMU manager
    reg [7:0] bank128 = 8'h00;
@@ -204,6 +204,7 @@ module new_memory (
    reg [7:0] timex_mmu = 8'h00;
    wire puerto_bloqueado = bank128[5];
    wire [2:0] banco_ram = bank128[2:0];
+   wire [1:0] banco_extendido_512k = bank128[7:6];
    wire vrampage = bank128[3];
    wire [1:0] banco_rom = {bankplus3[2] & (~disable_romsel1f), bank128[4] & (~disable_romsel7f)};
    wire amstrad_allram_page_mode = bankplus3[0];
@@ -219,29 +220,29 @@ module new_memory (
       end
       else begin
         if (!disable_1ffd && !disable_7ffd) begin
-            if (!iorq_n && !wr_n && `ADDR_1FFD && !puerto_bloqueado) begin
+            if (!iorq_n && !wr_n && ADDR_1FFD && !puerto_bloqueado) begin
                 bankplus3[7:3] <= din[7:3];
                 bankplus3[1:0] <= din[1:0];
                 bankplus3[2] <= din[2];
             end
-            else if (!iorq_n && !wr_n && `ADDR_7FFD_PLUS2A && !puerto_bloqueado) begin
+            else if (!iorq_n && !wr_n && ADDR_7FFD_PLUS2A && !puerto_bloqueado) begin
                 bank128[7:5] <= din[7:5];
                 bank128[3:0] <= din[3:0];
                 bank128[4] <= din[4];
             end
         end
-        else if (!disable_7ffd && disable_1ffd && !iorq_n && !wr_n && `ADDR_7FFD_SP128 && !puerto_bloqueado) begin
+        else if (!disable_7ffd && disable_1ffd && !iorq_n && !wr_n && ADDR_7FFD_SP128 && !puerto_bloqueado) begin
             bank128[7:5] <= din[7:5];
             bank128[3:0] <= din[3:0];
             bank128[4] <= din[4];
         end
-        else if (enable_timexmmu && !iorq_n && !wr_n && `ADDR_TIMEX_MMU)
+        else if (enable_timexmmu && !iorq_n && !wr_n && ADDR_TIMEX_MMU)
             timex_mmu <= din;
       end
    end
 
    always @* begin
-      if (!disable_7ffd && disable_1ffd && !iorq_n && (!wr_n || !rd_n) && `ADDR_7FFD_SP128)
+      if (!disable_7ffd && disable_1ffd && !iorq_n && (!wr_n || !rd_n) && ADDR_7FFD_SP128)
          ioreqbank = 1'b1;
       else
          ioreqbank = 1'b0;
@@ -250,7 +251,6 @@ module new_memory (
    reg [20:0] addr_port2;
    reg oe_memory_n;
    reg oe_bootrom_n;
-   reg write_bus_cycle;
    reg we2_n;
    reg ram_busy;
    assign enable_pzx = ~ram_busy;
@@ -267,7 +267,6 @@ module new_memory (
    // y señales de acceso de lectura y escritura
 
    always @* begin
-      write_bus_cycle = (mreq_n == 1'b0 && rfsh_n == 1'b1 && m1_n == 1'b1 && rd_n == 1'b1);
       oe_memory_n = mreq_n | rd_n;
       we2_n = mreq_n | wr_n;
       oe_bootrom_n = 1'b1;
@@ -303,11 +302,13 @@ module new_memory (
                    end
                    else begin  // Si estamos en los segundos 8K
                       if (mapram_mode == 1'b0 || conmem == 1'b1) begin
-                         addr_port2 = {4'b0010,divmmc_sram_page,a[12:0]};
+                         addr_port2 = {4'b0010,divmmc_sram_page[3:0],a[12:0]};
+                         if (divmmc_sram_page_is_valid == 1'b0)
+                           we2_n = 1'b1;
                       end
                       else begin  // mapram mode
-                         addr_port2 = {4'b0010,divmmc_sram_page,a[12:0]};
-                         if (mapram_mode && divmmc_sram_page==4'b0011)
+                         addr_port2 = {4'b0010,divmmc_sram_page[3:0],a[12:0]};
+                         if (mapram_mode && divmmc_sram_page==6'b000011 || divmmc_sram_page_is_valid == 1'b0)
                             we2_n = 1'b1;  // en este modo, la ROM es intocable
                       end
                    end
@@ -322,10 +323,10 @@ module new_memory (
                     end
                     else begin   // en el modo especial de paginación, tenemos el all-RAM
                        case (plus3_memory_arrangement)
-                          2'b00 : addr_port2 = {4'b0000,`PAGE0,a[13:0]};
+                          2'b00 : addr_port2 = {4'b0000,PAGE0,a[13:0]};
                           2'b01,
                           2'b10,
-                          2'b11 : addr_port2 = {4'b0000,`PAGE4,a[13:0]};
+                          2'b11 : addr_port2 = {4'b0000,PAGE4,a[13:0]};
                        endcase
                     end
                     
@@ -346,14 +347,14 @@ module new_memory (
       //------------------------------------------------------------------------------------------------------------------
       else if (!mreq_n && a[15:14]==2'b01) begin   // la CPU quiere acceder al espacio de RAM de $4000-$7FFF
          if (initial_boot_mode || !amstrad_allram_page_mode) begin   // en modo normal de paginación, o en modo boot, hacemos lo mismo, que es
-            addr_port2 = {4'b0000,`PAGE5,a[13:0]};      // paginar el banco 5 de RAM aquí
+            addr_port2 = {4'b0000,PAGE5,a[13:0]};      // paginar el banco 5 de RAM aquí
          end
          else begin   // en el modo especial de paginación del +3...
             case (plus3_memory_arrangement)
-               2'b00 : addr_port2 = {4'b0000,`PAGE1,a[13:0]};
+               2'b00 : addr_port2 = {4'b0000,PAGE1,a[13:0]};
                2'b01,
-               2'b10 : addr_port2 = {4'b0000,`PAGE5,a[13:0]};
-               2'b11 : addr_port2 = {4'b0000,`PAGE7,a[13:0]};
+               2'b10 : addr_port2 = {4'b0000,PAGE5,a[13:0]};
+               2'b11 : addr_port2 = {4'b0000,PAGE7,a[13:0]};
             endcase
          end
 
@@ -371,14 +372,14 @@ module new_memory (
       //------------------------------------------------------------------------------------------------------------------
       else if (!mreq_n && a[15:14]==2'b10) begin   // la CPU quiere acceder al espacio de RAM de $8000-$BFFF
          if (initial_boot_mode || !amstrad_allram_page_mode) begin
-            addr_port2 = {4'b0000,`PAGE2,a[13:0]};
+            addr_port2 = {4'b0000,PAGE2,a[13:0]};
          end
          else begin   // en el modo especial de paginación del +3...
             case (plus3_memory_arrangement)
-               2'b00 : addr_port2 = {4'b0000,`PAGE2,a[13:0]};
+               2'b00 : addr_port2 = {4'b0000,PAGE2,a[13:0]};
                2'b01,
                2'b10,
-               2'b11 : addr_port2 = {4'b0000,`PAGE6,a[13:0]};
+               2'b11 : addr_port2 = {4'b0000,PAGE6,a[13:0]};
             endcase
          end
 
@@ -400,14 +401,18 @@ module new_memory (
          end
          else begin
             if (!amstrad_allram_page_mode) begin
+`ifdef PENTAGON_512K_SUPPORT
+               addr_port2 = {banco_extendido_512k,2'b00,banco_ram,a[13:0]}; // para soportar Pentagon 512.
+`else
                addr_port2 = {4'b0000,banco_ram,a[13:0]};
+`endif               
             end
             else begin
                case (plus3_memory_arrangement)
                   2'b00,
                   2'b10,
-                  2'b11 : addr_port2 = {4'b0000,`PAGE3,a[13:0]};
-                  2'b01 : addr_port2 = {4'b0000,`PAGE7,a[13:0]};
+                  2'b11 : addr_port2 = {4'b0000,PAGE3,a[13:0]};
+                  2'b01 : addr_port2 = {4'b0000,PAGE7,a[13:0]};
                endcase
             end
          end
@@ -428,8 +433,7 @@ module new_memory (
         oe_bootrom_n = 1'b1;
       end
    end
-
-   // Hay contienda en las páginas 5 y 7 de memoria, que son las dos páginas de pantalla
+   
    always @* begin
      access_to_screen = 1'b0;
      if (!initial_boot_mode) begin
@@ -439,7 +443,7 @@ module new_memory (
             a[15:13]==3'b111 && timex_mmu[7]==1'b1)
                 access_to_screen = 1'b0;
         else if (!amstrad_allram_page_mode) begin
-           if (a[15:14]==2'b01 || (a[15:14]==2'b11 && (banco_ram==3'd1 || banco_ram== 3'd3 || banco_ram==3'd5 || banco_ram==3'd7))) begin
+           if (a[15:14]==2'b01 || (a[15:14]==2'b11 && banco_ram[0]==1'b1) ) begin // Hay contienda en las páginas impares de memoria
                access_to_screen = 1'b1;
            end
         end
@@ -451,8 +455,7 @@ module new_memory (
    wire [7:0] ram_dout;
 
    sram_and_mirror toda_la_ram (  // Nuevo controlador de SRAM usando BRAM de doble puerto para evitar la contienda
-      .clk(mclk),
-      .write_bus_cycle(write_bus_cycle),
+      .clk(clk),
       .a1({vrampage,vramaddr}),
       .a2(addr_port2),
       .we2_n(we2_n),
@@ -472,7 +475,7 @@ module new_memory (
       );
 
    rom boot_rom (
-      .clk(mclk),
+      .clk(clk),
       .a(a[13:0]),
       .dout(bootrom_dout)
     );    
@@ -491,7 +494,7 @@ module new_memory (
          dout = ram_dout;
          oe = 1'b1;
       end
-      else if (enable_timexmmu && iorq_n == 1'b0 && rd_n == 1'b0 && `ADDR_TIMEX_MMU) begin
+      else if (enable_timexmmu && iorq_n == 1'b0 && rd_n == 1'b0 && ADDR_TIMEX_MMU) begin
          oe = 1'b1;
          dout = timex_mmu;
       end
@@ -513,7 +516,6 @@ endmodule
 
 module sram_and_mirror (
     input wire clk,          // 28MHz
-    input wire write_bus_cycle,  // To indicate if this is a write cycle, so exposing din2 as much as possible
     input wire [14:0] a1,    // to BRAM addr bus
     input wire [20:0] a2,    // to SRAM addr bus
     input wire we2_n,        // to SRAM WE enable
@@ -537,31 +539,45 @@ module sram_and_mirror (
     reg [7:0] vram[0:32767];
     integer i;
     initial begin
-        $readmemh("initial_bootscreen.hex", vram, 0, 6912);
-        for (i=6912;i<32768;i=i+1)
+        for (i=0;i<32768;i=i+1)
             vram[i] = 8'h00;
+`ifdef LOAD_ROM_FROM_FLASH_OPTION
+        $readmemh("initial_bootscreen.hex", vram, 0);
+`else
+        $readmemh(`DEFAULT_SYSTEM_ROM, vram, 0);
+`endif        
     end
     
     // BRAM manager
+    reg [7:0] data_from_bram;
     always @(posedge clk) begin
-        if (we2_n == 1'b0 && a2[20:16] == 5'b00001 && a2[14] == 1'b1)
+        if (a2[20:16] == 5'b00001 && a2[14] == 1'b1) begin
+          if (we2_n == 1'b0)
             vram[{a2[15],a2[13:0]}] <= din2;
+          else
+            data_from_bram <= vram[{a2[15],a2[13:0]}];
+        end
         dout1 <= vram[a1];
     end
     
+    reg we2_n_dly = 1'b1;
+    always @(negedge clk)
+      we2_n_dly <= we2_n;
+    
     // SRAM manager. Easy, isn't it? :D
-    // sin lector de PZX
-//    assign a = a2;
-//    assign we_n = we2_n;
-//    assign dout2 = d;
-//    assign d = (write_bus_cycle == 1'b1)? din2 : 8'hZZ;
-
-    // con lector de PZX
+`ifdef PZX_PLAYER_OPTION
     assign a =    (enable_pzx)? pzx_addr : a2;
-    assign we_n = (enable_pzx)? ~write_data_pzx : we2_n;
-    assign dout2 = d;
+    assign we_n = (enable_pzx)? ~write_data_pzx : we2_n & we2_n_dly;  // pulso de escritura ligeramente ensenchado
+    assign dout2 = (a2[20:16] == 5'b00001 && a2[14] == 1'b1)? data_from_bram : d;
     assign data_to_pzx = d;
-    assign d = (write_bus_cycle == 1'b1 && write_data_pzx == 1'b0)? din2 : 
-               (write_data_pzx == 1'b1)? data_from_pzx :
+    assign d = (we2_n_dly == 1'b0 && write_data_pzx == 1'b0)? din2 :  // dejo medio ciclo de reloj a Z antes de poner el dato
+               (enable_pzx == 1'b1 && write_data_pzx == 1'b1)? data_from_pzx :
                8'hZZ;
+`else
+    assign a = a2;
+    assign we_n = we2_n & we2_n_dly;
+    assign dout2 = (a2[20:16] == 5'b00001 && a2[14] == 1'b1)? data_from_bram : d;
+    assign data_to_pzx = 8'h00;
+    assign d = (we2_n_dly == 1'b0)? din2 : 8'hZZ;
+`endif               
 endmodule

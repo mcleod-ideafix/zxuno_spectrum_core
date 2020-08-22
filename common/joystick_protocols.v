@@ -112,24 +112,22 @@ module joystick_protocols (
       else if (iorq_n == 1'b0 && rd_n == 1'b0) begin  // lectura genérica de I/O
         if (a[7:0] == KEMPSTONADDR) begin
           dout = 8'h00;
+          oe = 1'b1;
           if (joyconf[2:0] == KEMPSTON) begin
               dout = dout | {2'b00, kbdjoyfire2, kbdjoyfire_processed, kbdjoyup, kbdjoydown, kbdjoyleft, kbdjoyright};
-              oe = 1'b1;
           end
           if (joyconf[6:4] == KEMPSTON) begin
               dout = dout | {2'b00, db9joyfire2, db9joyfire_processed, db9joyup, db9joydown, db9joyleft, db9joyright};
-              oe = 1'b1;
           end
         end
         else if (a[7:0] == FULLERADDR) begin
           dout = 8'hFF;
+          oe = 1'b1;
           if (joyconf[2:0] == FULLER) begin
               dout = dout & {~kbdjoyfire_processed, ~kbdjoyfire2, 2'b11, ~kbdjoyright, ~kbdjoyleft, ~kbdjoydown, ~kbdjoyup};
-              oe = 1'b1;
           end
           if (joyconf[6:4] == FULLER) begin
               dout = dout & {~db9joyfire_processed, ~db9joyfire2, 2'b11, ~db9joyright, ~db9joyleft, ~db9joydown, ~db9joyup};
-              oe = 1'b1;
           end
         end
         else if (a[0] == 1'b0) begin  // lectura de I/O de teclado

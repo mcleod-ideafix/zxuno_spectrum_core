@@ -151,7 +151,7 @@ module uart_rx (
     );
 
     initial rxrecv = 1'b0;
-     initial rts = 1'b0;
+    initial rts = 1'b0;
 
     parameter CLK = 28000000;
     parameter BPS = 115200;
@@ -165,21 +165,15 @@ module uart_rx (
         STOP  = 3'd3,
         WAIT  = 3'd4;
 
-    // Sincronizacin de seales externas
+    // Sincronizacin de señales externas
     reg [1:0] rx_ff = 2'b00;
     always @(posedge clk) begin
-        rx_ff[1] <= rx_ff[0];
-        rx_ff[0] <= rx;
+        rx_ff <= {rx_ff[0], rx};
     end
-    wire rx_int = rx_ff[1];
 
-    reg [7:0] rxvalues = 8'h00;
-    always @(posedge clk) begin
-        rxvalues <= {rxvalues[6:0], rx_int};
-    end
-    wire rx_is_1    = (rxvalues==8'hFF)? 1'b1: 1'b0;
-    wire rx_is_0    = (rxvalues==8'h00)? 1'b1: 1'b0;
-    wire rx_negedge = (rxvalues==8'hF0)? 1'b1: 1'b0;
+    wire rx_is_1    = (rx_ff == 2'b11);
+    wire rx_is_0    = (rx_ff == 2'b00);
+    wire rx_negedge = (rx_ff == 2'b10);
 
     reg [15:0] bpscounter;
     reg [2:0] state = IDLE;
@@ -191,54 +185,49 @@ module uart_rx (
         case (state)
             IDLE:
                 begin
-                    rxrecv <= 1'b0;
-                    if (rx_negedge == 1'b1) begin
-                        bpscounter <= PERIOD - 4;  // porque ya hemos perdido 4 ciclos detectando el flanco negativo
-                        rts <= 1'b1;
+                    rts <= 1'b0;      // permitimos la recepción
+                    rxrecv <= 1'b0;   // si estamos aqui, es porque no hay bytes pendientes de leer
+                    if (rx_negedge) begin
+                        bpscounter <= PERIOD - 2;  // porque ya hemos perdido 2 ciclos detectando el flanco negativo                        
                         state <= START;
-                    end
-                    else begin
-                        rts <= 1'b0;
                     end
                 end
             START:
                 begin
-                    bpscounter <= bpscounter - 8'd1;
-                    if (bpscounter == HALFPERIOD) begin
-                        if (!rx_is_0) begin  // si no era una seal de START de verdad
+                    bpscounter <= bpscounter - 16'd1;
+                    if (bpscounter == HALFPERIOD) begin   // sampleamos el bit a mitad de ciclo
+                        if (!rx_is_0) begin  // si no era una señal de START de verdad
                             state <= IDLE;
-  //                          rts <= 1'b0;
                         end
                     end
                     else if (bpscounter == 16'h0000) begin
                         bpscounter <= PERIOD;
-                        rxshiftreg <= 8'h00;
+                        rxshiftreg <= 8'h00;    // aqui iremos guardando los bits recibidos
                         bitcnt <= 3'd7;
-                        rxrecv <= 1'b0;
                         state <= BIT;
                     end
                 end
             BIT:
                 begin
                     bpscounter <= bpscounter - 16'd1;
-                    if (bpscounter == HALFPERIOD) begin
+                    if (bpscounter == HALFPERIOD) begin   // sampleamos el bit a mitad de ciclo
                         if (rx_is_1) begin
-                            rxshiftreg <= {1'b1, rxshiftreg[7:1]};
+                            rxshiftreg <= {1'b1, rxshiftreg[7:1]};   // los bits entran por la izquierda, del LSb al MSb
                         end
                         else if (rx_is_0) begin
                             rxshiftreg <= {1'b0, rxshiftreg[7:1]};
                         end
                         else begin
                             state <= IDLE;
-//                            rts <= 1'b0;
                         end
                     end
                     else if (bpscounter == 16'h0000) begin
                         bitcnt <= bitcnt - 3'd1;
                         bpscounter <= PERIOD;
-                        if (bitcnt == 3'd0) begin
+//                        if (bitcnt == 3'd3)
+//                            rts <= 1'b1;
+                        if (bitcnt == 3'd0)
                             state <= STOP;
-                        end
                     end
                 end
 
@@ -248,25 +237,19 @@ module uart_rx (
                 begin
                     bpscounter <= bpscounter - 16'd1;
                     if (bpscounter == HALFPERIOD) begin
-                        if (!rx_is_1) begin  // si no era una seal de STOP de verdad
+                        if (!rx_is_1) begin  // si no era una señal de STOP de verdad
                             state <= IDLE;
-//                            rts <= 1'b0;
                         end
                         else begin
                             rxrecv <= 1'b1;
+                            rts <= 1'b1;
                             rxdata <= rxshiftreg;
                             state <= WAIT;
                         end
-/*
-                        else begin
-                            rts <= 1'b1;
-                        end
-*/
                     end
                 end
             WAIT:
                 begin
-                    rxrecv <= 1'b0;
                     if (data_read == 1'b1) begin
                         state <= IDLE;
                     end

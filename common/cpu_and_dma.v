@@ -52,6 +52,8 @@ module cpu_and_dma (
   output wire oe
   );
 
+`include "config.vh"
+
   wire [15:0] dma_a, cpu_a;
   wire [7:0] dma_dout, cpu_dout;
   wire dma_mreq_n, dma_iorq_n, dma_rd_n, dma_wr_n;
@@ -75,7 +77,8 @@ module cpu_and_dma (
   assign dout   = (busak_n == 1'b1)? cpu_dout   : dma_dout;
   
   assign busak_salida_n = busak_n;
-  
+
+`ifdef ZXUNO_DMA_SUPPORT  
   dma la_dma (
     .clk(clk),  
     .rst_n(reset_n),
@@ -98,6 +101,16 @@ module cpu_and_dma (
     .dma_rd_n(dma_rd_n),
     .dma_wr_n(dma_wr_n)
   );
+`else
+  assign busrq_n = 1'b1;
+  assign oe = 1'b0;
+  assign dma_dout = 8'h00;
+  assign dma_a = 16'h0000;
+  assign dma_mreq_n = 1'b1;
+  assign dma_iorq_n = 1'b1;
+  assign dma_rd_n = 1'b1;
+  assign dma_wr_n = 1'b1;
+`endif
 
   tv80n_wrapper el_z80 (
     .m1_n(cpu_m1_n),

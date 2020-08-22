@@ -20,9 +20,47 @@
 //
 //    Any distributed copy of this file must keep this notice intact.
 
-// ZXUNO core ID string. Must be padded with zero bytes to the right (16 bytes total)
-  localparam COREID_STRING = "EXP27-160720\000\000\000\000";
 
+// Build options (comment out to disable a specific option)
+
+`define LOAD_ROM_FROM_FLASH_OPTION
+// The following two defines are taken into account only if LOAD_ROM_FROM_FLASH_OPTION is not defined
+`define DEFAULT_SYSTEM_ROM "128en.hex"
+`define DEFAULT_DIVMMC_ROM "esxdos088.hex"
+`define MIDI_SYNTH_OPTION
+`define UART_ESP8266_OPTION
+`define PZX_PLAYER_OPTION
+`define VGA_OUTPUT_OPTION
+`define CPU_TURBO_OPTION
+`define DIVMMC_SUPPORT
+`define ZXUNO_DMA_SUPPORT
+`define ULA_TIMEX_SUPPORT
+
+// Radastan mode needs ULAplus support enabled
+`define ULAPLUS_SUPPORT
+`define ULA_RADASTAN_SUPPORT
+`define ULA_SNOW_SUPPORT
+`define RASTER_INTERRUPT_SUPPORT
+`define TURBOSUND_SUPPORT
+`define SPECDRUM_COVOX_SUPPORT
+`define MULTIBOOT_SUPPORT
+//`define PENTAGON_512K_SUPPORT
+
+// FPGA color clock generation needs AD724 control support enabled
+//`define AD724_CONTROL_SUPPORT
+//`define FPGA_GENERATES_COLOR_CLOCK_OPTION
+
+// ZXUNO core ID string. Must be padded with zero bytes to the right (16 bytes total)
+  localparam COREID_STRING = {"EXP27-220820", 8'h00, 8'h00, 8'h00, 8'h00};
+
+// Power-on/FPGA PROG video configuration  
+  localparam
+    VSYNC_OPTION     = 1'b0,   // 0=Sinclair simple vertical sync, 1=proper PAL vsync
+    FREQ_OPTION      = 3'b000, // 0 to 7 (50 to almost 60 Hz)
+    SCANLINES_OPTION = 1'b0,   // 0=no scanlines, 1=scanlines
+    VIDEO_OPTION     = 1'b1;   // 0=RGB, 1=VGA
+  localparam INITIAL_VIDEO_VALUE = {2'b00, VSYNC_OPTION, FREQ_OPTION, SCANLINES_OPTION, VIDEO_OPTION};
+  
 // ZXUNO address/data I/O ports for indirect access to ZXUNO registers
   localparam
     IOADDR = 16'hFC3B,

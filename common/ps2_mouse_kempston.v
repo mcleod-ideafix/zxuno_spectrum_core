@@ -32,8 +32,8 @@ module ps2_mouse_kempston (
     input wire [15:0] a,
     input wire iorq_n,
     input wire rd_n,
-    output wire [7:0] kmouse_dout,
-    output wire oe_kmouse,
+    output reg [7:0] kmouse_dout,
+    output reg oe_kmouse,
     //---------------------------------
     input wire [7:0] zxuno_addr,
     input wire zxuno_regrd,
@@ -58,14 +58,19 @@ module ps2_mouse_kempston (
     wire [1:0] state_out;
     assign mousedata_dout = mousedata;
     
-    wire kmouse_x_req_n    = ~(!iorq_n && !rd_n && a[7:0]==8'hDF && a[8]==1'b1 && a[9]==1'b1 && a[10]==1'b0);
-    wire kmouse_y_req_n    = ~(!iorq_n && !rd_n && a[7:0]==8'hDF && a[8]==1'b1 && a[9]==1'b1 && a[10]==1'b1);
-    wire kmouse_butt_req_n = ~(!iorq_n && !rd_n && a[7:0]==8'hDF && a[8]==1'b0);
-    assign kmouse_dout     = (kmouse_x_req_n==1'b0)? kmouse_x :
-                             (kmouse_y_req_n==1'b0)? kmouse_y :
-                             (kmouse_butt_req_n==1'b0)? kmouse_buttons :
-                             8'hZZ;
-    assign oe_kmouse = ~(kmouse_x_req_n & kmouse_y_req_n & kmouse_butt_req_n);
+    wire kmouse_x_req    = (!iorq_n && !rd_n && a[7:0]==8'hDF && a[8]==1'b1 && a[9]==1'b1 && a[10]==1'b0);
+    wire kmouse_y_req    = (!iorq_n && !rd_n && a[7:0]==8'hDF && a[8]==1'b1 && a[9]==1'b1 && a[10]==1'b1);
+    wire kmouse_butt_req = (!iorq_n && !rd_n && a[7:0]==8'hDF && a[8]==1'b0);
+    
+    always @* begin
+      oe_kmouse = (kmouse_x_req | kmouse_y_req | kmouse_butt_req);
+      case (1'b1)
+        kmouse_x_req    : kmouse_dout = kmouse_x;
+        kmouse_y_req    : kmouse_dout = kmouse_y;
+        kmouse_butt_req : kmouse_dout = kmouse_buttons;
+        default         : kmouse_dout = 8'hFF;
+      endcase
+    end
     
     /*
     | BSY | 0 | 0 | 0 | ERR | 0 | 0 | DATA_AVL |
@@ -88,6 +93,7 @@ module ps2_mouse_kempston (
         .enable_rcv(~ps2busy),
         .kb_or_mouse(1'b1),
         .ps2clk_ext(clkps2),
+        
         .ps2data_ext(dataps2),
         .kb_interrupt(nuevo_evento),
         .scancode(mousedata),

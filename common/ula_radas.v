@@ -93,6 +93,7 @@ module ula_radas (
     );
 
 `include "config.vh"
+
     parameter
       BHPIXEL =  0,
       EHPIXEL =  255,
@@ -252,13 +253,14 @@ module ula_radas (
     wire HR  = TimexConfigReg[2];
     assign doc_ext_option = enable_timexmmu & TimexConfigReg[7];
     wire [2:0] HRInk = TimexConfigReg[5:3];
+`ifdef ULA_TIMEX_SUPPORT
     always @(posedge sysclk) begin
       if (rst_n == 1'b0)
          TimexConfigReg <= 8'h00;
       else if (TimexConfigLoad)
          TimexConfigReg <= din;
     end
-    
+`endif    
     // Combinational logic between AttrData and AttrOutput
     reg [7:0] InputToAttrOutput;
     always @* begin
@@ -303,7 +305,7 @@ module ula_radas (
     wire PixelWFlash = Pixel ^ (Flash & FlashFF);
     always @(posedge sysclk) begin
 		if (vc==BVSYNC && hc==0 && clk7en)
-			FlashCounter <= FlashCounter + 1;
+			FlashCounter <= FlashCounter + 5'd1;
 	  end
    
    // Standard ULA final 4-bit IGRB colour
@@ -341,7 +343,7 @@ module ula_radas (
 				default: Std9bitColour = {`none,`none,`none};
 	  endcase
 	end
-   
+
    // PaletteReg register (ULAplus)
    reg [6:0] PaletteReg = 7'h00;
    always @(posedge sysclk) begin
@@ -449,6 +451,8 @@ module ula_radas (
    reg [6:0] dram_row_for_ula_snow = 7'h00;
    reg snow_is_about_to_happen = 1'b0;
    reg [6:0] latched_row_from_first_burst = 7'h00;
+
+`ifdef ULA_SNOW_SUPPORT   
    always @(posedge sysclk) begin
      if (clk7en) begin       
        if ((hc[3:0] == 4'd7 || hc[3:0] == 4'd8 || hc[3:0] == 4'd11) && rfsh_n == 1'b0 && mreq_n == 1'b0 && a[15:14]==2'b01) begin
@@ -466,6 +470,7 @@ module ula_radas (
          latched_row_from_first_burst <= va[6:0];  // this is the row value that would be latched during the first DRAM read burst.
      end
    end
+`endif
    
    wire [8:0] hcd = hc + 9'hFF8;  // hc delayed 8 ticks
    always @* begin
@@ -486,7 +491,7 @@ module ula_radas (
             end
          end
          else
-            va = 14'hZZZZ;
+            va = 14'h0000;
      end
      else begin         
          va = {PG,vc[7:1],hcd[7:2]} + radasoffset + vc[7:1]*radaspadding;
@@ -547,7 +552,7 @@ module ula_radas (
             end
          end
       end
-      
+`ifdef ULA_RADASTAN_SUPPORT      
       else begin  // Control para el modo radastaniano
          if (hc[1:0]==2'b11) begin   // trasladamos dos píxeles a la salida
             AttrOutputLoad = 1'b1;
@@ -559,7 +564,7 @@ module ula_radas (
             end
          end
       end
-      
+`endif      
    end
 
 ///////////////////////////////////////////////
@@ -706,7 +711,7 @@ module ula_radas (
 // AUXILIARY SIGNALS FOR CONTENTION CONTROL
 ///////////////////////////////////
    wire iorequla = !iorq_n && (a[0]==0);
-   wire iorequlaplus = !iorq_n && (a==ULAPLUSADDR || a==ULAPLUSDATA);
+   wire iorequlaplus = !iorq_n && !disable_ulaplus && (a==ULAPLUSADDR || a==ULAPLUSDATA);
    wire ioreqall_n = !(iorequlaplus || iorequla || ioreqbank);
 
 ///////////////////////////////////

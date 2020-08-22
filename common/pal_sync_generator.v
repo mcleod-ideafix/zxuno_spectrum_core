@@ -59,6 +59,8 @@ module pal_sync_generator (
     output wire int_n
     );
 
+`include "config.vh"
+
     reg [8:0] hc = 9'h000;
     reg [8:0] vc = 9'h000;
 
@@ -208,12 +210,14 @@ module pal_sync_generator (
 
     always @* begin
       raster_int_n = 1'b1;
+`ifdef RASTER_INTERRUPT_SUPPORT
       if (rasterint_enable == 1'b1 && hc >= 256 && hc <= 319) begin
         if (raster_line == 9'd0 && vc == end_count_v) 
           raster_int_n = 1'b0;
         if (raster_line != 9'd0 && vc == (raster_line - 9'd1))
           raster_int_n = 1'b0;
       end
+`endif      
     end
 
     reg hblank; // = 1'b0;

@@ -33,8 +33,10 @@ module clk_enables (
 	output wire clk35en,
 	output wire clk35en_n,
 	output wire clk175en,
-	output wire clkcpu_enable
+	output reg clkcpu_enable
   );
+
+`include "config.vh"
 
 // 28 MHz master clock
   reg [15:0] divclk = 16'h00000001;
@@ -70,11 +72,20 @@ module clk_enables (
 //  assign clk35en   = divclk[0] | divclk[12];
 //  assign clk35en_n = divclk[23] | divclk[11];
 //  assign clk175en  = divclk[0];
-  
-  assign clkcpu_enable = (cpu_speed[2] == 1'b1)            ||
-                         (cpu_speed == 4'b0011)            ||
-                         (cpu_speed == 4'b0010 && clk14en) ||
-                         (cpu_speed == 4'b0001 && clk7en)  ||
-                         (cpu_speed == 4'b0000 && clk35en && !CPUContention);
 
+`ifdef CPU_TURBO_OPTION  
+  always @* begin
+    casez (cpu_speed[2:0])
+      3'b1?? : clkcpu_enable = 1'b1;
+      3'b000 : clkcpu_enable = clk35en && !CPUContention;
+      3'b001 : clkcpu_enable = clk7en;
+      3'b010 : clkcpu_enable = clk14en;
+      3'b011 : clkcpu_enable = 1'b1;
+    endcase
+  end
+`else
+  always @*
+    clkcpu_enable = clk35en && !CPUContention;  
+`endif
+    
 endmodule

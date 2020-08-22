@@ -512,9 +512,9 @@ begin
 							PC <= "0000000001100110";
 						elsif MCycle = "011" and IntCycle = '1' and IStatus = "10" then
 							A(15 downto 8) <= I;
-							A(7 downto 0) <= WZ(7 downto 0);
+							A(7 downto 0) <= "11111111";  -- WZ(7 downto 0);  -- force $FF into IM 2 vector
 							PC(15 downto 8) <= unsigned(I);
-							PC(7 downto 0) <= unsigned(WZ(7 downto 0));
+							PC(7 downto 0) <= "11111111";  --unsigned(WZ(7 downto 0));  -- force $FF into IM 2 vector
 						else
 							case Set_Addr_To is
 							when aXY =>

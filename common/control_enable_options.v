@@ -49,20 +49,48 @@ module control_enable_options(
 
 `include "config.vh"
     
-    reg [7:0] devoptions = 8'h00;  // initial value
+    reg [7:0] devoptions = 8'b00101000;  // initial value. Modo 128K
     reg [7:0] devopts2 = 8'h00;    // initial value
     assign disable_ay = devoptions[0];
+`ifdef TURBOSUND_SUPPORT    
     assign disable_turboay = devoptions[1];
+`else
+    assign disable_turboay = 1'b1;
+`endif    
     assign disable_7ffd = devoptions[2];
     assign disable_1ffd = devoptions[3];
     assign disable_romsel7f = devoptions[4];
     assign disable_romsel1f = devoptions[5];
+`ifdef ULA_TIMEX_SUPPORT
     assign enable_timexmmu = devoptions[6];
+`else
+    assign enable_timexmmu = 1'b0;
+`endif    
+`ifdef DIVMMC_SUPPORT
     assign disable_spisd = devoptions[7];
+`else
+    assign disable_spisd = 1'b1;
+`endif
+`ifdef ULAPLUS_SUPPORT
     assign disable_ulaplus = devopts2[0];
+`else
+    assign disable_ulaplus = 1'b1;
+`endif    
+`ifdef ULA_TIMEX_SUPPORT
     assign disable_timexscr = devopts2[1];
+`else
+    assign disable_timexscr = 1'b1;
+`endif
+`ifdef ULA_RADASTAN_SUPPORT
     assign disable_radas = devopts2[2];
+`else
+    assign disable_radas = 1'b1;
+`endif    
+`ifdef SPECDRUM_COVOX_SUPPORT
     assign disable_specdrum = devopts2[3];
+`else
+    assign disable_specdrum = 1'b1;
+`endif    
     assign disable_mixer = devopts2[4];
     
     always @(posedge clk) begin
@@ -82,11 +110,11 @@ module control_enable_options(
         if (zxuno_regrd == 1'b1)            
             if (zxuno_addr == DEVOPTIONS) begin
                 oe = 1'b1;
-                dout = devoptions;
+                dout = { disable_spisd, enable_timexmmu, devoptions[5:2], disable_turboay, devoptions[0] };
             end
             else if (zxuno_addr == DEVOPTS2) begin
                 oe = 1'b1;
-                dout = devopts2;
+                dout = { devopts2[7:4], disable_specdrum, disable_radas, disable_timexscr, disable_ulaplus };
             end
         end
 endmodule

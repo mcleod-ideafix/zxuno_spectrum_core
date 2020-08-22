@@ -44,7 +44,6 @@ module zxunouart (
     wire [7:0] rxdata;
 
     reg comenzar_trans = 1'b0;
-    reg rxrecv = 1'b0;
     reg leyendo_estado = 1'b0;
 
     wire data_read;
@@ -67,12 +66,12 @@ module zxunouart (
     always @* begin
         oe = 1'b0;
         dout = 8'hFF;
-        if (zxuno_addr == UARTDATA && zxuno_regrd == 1'b1) begin
+        if (data_read) begin
             dout = rxdata;
             oe = 1'b1;
         end
         else if (zxuno_addr == UARTSTAT && zxuno_regrd == 1'b1) begin
-            dout = {rxrecv, txbusy, 6'h00};
+            dout = {data_received, txbusy, 6'h00};
             oe = 1'b1;
         end
     end
@@ -83,18 +82,6 @@ module zxunouart (
         end
         if (comenzar_trans == 1'b1 && txbusy == 1'b1) begin
             comenzar_trans <= 1'b0;
-        end
-
-        if (data_received == 1'b1)
-            rxrecv <= 1'b1;
-
-        if (data_received == 1'b0) begin
-            if (zxuno_addr == UARTSTAT && zxuno_regrd == 1'b1)
-                leyendo_estado <= 1'b1;
-            if (leyendo_estado == 1'b1 && (zxuno_addr != UARTSTAT || zxuno_regrd == 1'b0)) begin
-                leyendo_estado <= 1'b0;
-                rxrecv <= 1'b0;
-            end
         end
     end
 endmodule

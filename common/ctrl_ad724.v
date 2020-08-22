@@ -33,7 +33,8 @@ module control_ad724 (
     output wire [7:0] dout,
     output wire oe,
     output wire ad724_xtal,
-    output wire ad724_mode
+    output wire ad724_mode,
+    output wire ad724_enable_gencolorclk
     );
 
 `include "config.vh"
@@ -44,6 +45,7 @@ module control_ad724 (
     reg [7:0] ad724 = 8'h00;  // initial value
     assign ad724_xtal = ~ad724[0];
     assign ad724_mode = ad724[0];
+    assign ad724_enable_gencolorclk = ad724[1];
     
     always @(posedge clk) begin
         if (poweron_rst_n == 1'b0)

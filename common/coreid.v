@@ -40,7 +40,7 @@ module coreid (
     initial begin 
       for (i=0;i<16;i=i+1) begin :gencoreid
         text[i] = COREID_STRING[(16-i)*8-1 -:8];
-		  end
+      end
     end      
     
     reg [3:0] textindx = 4'h0;

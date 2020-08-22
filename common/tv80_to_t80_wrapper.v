@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ns / 1ns
 
 //    This file is part of the ZXUNO Spectrum core. 
 //    Creation date is 03:39:55 2012-05-13 by Miguel Angel Rodriguez Jodar

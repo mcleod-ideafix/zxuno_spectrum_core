@@ -28,16 +28,30 @@ module rom (
     output reg [7:0] dout
     );
 
+`include "config.vh"
+
+`ifdef LOAD_ROM_FROM_FLASH_OPTION
    reg [7:0] mem[0:16383];
    integer i;
-   initial begin  // usa $readmemb/$readmemh dependiendo del formato del fichero que contenga la ROM
+   initial begin  
       for (i=0;i<16384;i=i+1) begin
         mem[i] = 8'h00;
       end
-      $readmemh ("bootloader_hex.txt", mem, 0);
+      $readmemh ("bootloader_to_bios_and_easter_egg.hex", mem, 0);      
    end
+`else
+   reg [7:0] mem[0:9215];  // este tamaño es el justito para que quepa en un bloque de BRAM, que es de 9KB
+   integer i;
+   initial begin  
+      for (i=0;i<9216;i=i+1) begin
+        mem[i] = 8'h00;
+      end
+      $readmemh ("bootloader_copy_bram_to_sram.hex", mem, 0);
+      $readmemh (`DEFAULT_DIVMMC_ROM, mem, 512);      
+   end
+`endif
 
    always @(posedge clk) begin
-     dout <= mem[a[13:0]];
+     dout <= mem[a];
    end
 endmodule

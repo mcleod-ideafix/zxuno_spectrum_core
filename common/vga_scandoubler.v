@@ -25,6 +25,7 @@
 
 module vga_scandoubler (
   input wire clk,
+  input wire clkcolor4x,
   input wire clk14en,
   input wire enable_scandoubling,
   input wire disable_scaneffect,  // 1 to disable scanlines
@@ -34,9 +35,9 @@ module vga_scandoubler (
   input wire hsync_ext_n,
   input wire vsync_ext_n,
   input wire csync_ext_n,
-  output reg [5:0] ro,
-  output reg [5:0] go,
-  output reg [5:0] bo,
+  output reg [2:0] ro,
+  output reg [2:0] go,
+  output reg [2:0] bo,
   output reg hsync,
   output reg vsync
   );
@@ -157,12 +158,12 @@ module vga_scandoubler (
       go = {gi,gi};
       bo = {bi,bi};
       hsync = csync_ext_n;
-      vsync = 1'b1;
+      vsync = clkcolor4x;
     end
     else begin  // VGA output
-      ro = {ro_vga,ro_vga};
-      go = {go_vga,go_vga};
-      bo = {bo_vga,bo_vga};
+      ro = ro_vga;
+      go = go_vga;
+      bo = bo_vga;
       hsync = hsync_vga;
       vsync = vsync_vga;
     end

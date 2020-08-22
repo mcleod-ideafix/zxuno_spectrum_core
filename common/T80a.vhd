@@ -120,14 +120,14 @@ begin
 	MREQ_n_i <= not MREQ or (Req_Inhibit and MReq_Inhibit);
 	RD_n_i <= not RD or Req_Inhibit;
 
-	MREQ_n <= MREQ_n_i when BUSAK_n_i = '1' else 'Z';
-	IORQ_n <= IORQ_n_i when BUSAK_n_i = '1' else 'Z';
-	RD_n <= RD_n_i when BUSAK_n_i = '1' else 'Z';
-	WR_n <= WR_n_i when BUSAK_n_i = '1' else 'Z';
-	RFSH_n <= RFSH_n_i when BUSAK_n_i = '1' else 'Z';
-	A <= A_i when BUSAK_n_i = '1' else (others => 'Z');
+	MREQ_n <= MREQ_n_i;
+	IORQ_n <= IORQ_n_i;
+	RD_n <= RD_n_i;
+	WR_n <= WR_n_i;
+	RFSH_n <= RFSH_n_i;
+	A <= A_i;
 	--D <= DO when Write = '1' and BUSAK_n_i = '1' else (others => 'Z');
-  DOUT <= DO when BUSAK_n_i = '1' else (others => 'Z');
+  DOUT <= DO;
 
 	process (RESET_n, CLK_n)
 	begin
